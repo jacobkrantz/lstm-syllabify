@@ -86,3 +86,32 @@ def process_data(paths, dataset_columns, dataset, mappings):
             data[name][i]['tokens'] = [mappings[raw] for raw in entry['raw_tokens']]
 
     return data
+
+
+
+def read_conll_single(f_name):
+    words = []
+    with open(f_name, 'r') as f:
+        word = []
+        for line in f:
+            line = line.split()
+            if len(line) == 0:
+                words.append({ 'tokens' : copy(word) })
+                word = []
+                continue
+            
+            word.append(line[0])
+
+    return words
+
+def create_data_matrix(words, mappings):
+    # TODO: this should be merged with process_data
+    data = []
+    for word in words:
+        data.append({
+            'raw_tokens' : word['tokens'],
+            'tokens' : [mappings[raw] for raw in word['tokens']]
+        })
+    
+    return data
+    

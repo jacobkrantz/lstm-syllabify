@@ -3,10 +3,10 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 
-font = {'family' : 'normal',
-        'weight' : 'bold',
-        'size'   : 22}
-
+font = {
+    'weight' : 'bold',
+    'size' : 22
+}
 matplotlib.rc('font', **font)
 
 def plot(csv_file):

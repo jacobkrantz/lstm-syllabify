@@ -6,12 +6,12 @@ import sys
 from neuralnets.BiLSTM import BiLSTM
 from preprocessing import load_dataset
 
-# :: Change into the working dir of the script ::
+# Change into the working dir of the script
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
 os.chdir(dname)
 
-# :: Logging level ::
+# Logging level
 loggingLevel = logging.INFO
 logger = logging.getLogger()
 logger.setLevel(loggingLevel)
@@ -22,14 +22,9 @@ formatter = logging.Formatter('%(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
-######################################################
-#
 # Data preprocessing
-#
-######################################################
-# NOTE: not currently used. Preprocessing of these details is hardcoded.
 datasets = {
-    'english':                                          # Name of the dataset. Same as folder name in /celex-data/
+    'english':                                            # Name of the dataset. Same as folder name in /celex-data/
         {
             'columns': {0:'raw_tokens', 1:'boundaries'},  # CoNLL format for the input data (tab-delineated). Column 0 contains phones, column 1 contains syllable boundary information
             'label': 'boundaries'                         # Which column we like to predict
@@ -75,24 +70,16 @@ N_CLASS_LABELS
     - Default is two: either boundary (1) or no boundary (0)
 """
 
-
-######################################################
-#
-# The training of the network starts here
-#
-######################################################
-
-# Some network hyperparameters
-params = {
-    'classifier': ['Softmax'], # either 'Softmax' or 'CRF'. CRF is not ready yet.
-    'LSTM-Size': [100],
+params_to_update = {
+    'classifier': ['softmax'], # either 'softmax' or 'crf'. crf is not ready yet.
+    'lstm_size': [100],
     'dropout': (0.25, 0.25),
-    'embedding-size': 100
+    'embedding_size': 100
 }
 
-model = BiLSTM(params)
-model.setVocabSize(vocab_size, n_class_labels)
-model.setDataset(datasets, data)
-model.storeResults('results/english.csv') #Path to store performance scores for dev / test
-model.modelSavePath = "models/[ModelName]_[DevScore]_[TestScore]_[Epoch].h5" #Path to store models
+model = BiLSTM(params_to_update)
+model.set_vocab_size(vocab_size, n_class_labels, mappings)
+model.set_dataset(datasets, data)
+model.store_results('results/english.csv') # Path to store performance scores for dev / test
+model.model_save_path = "models/[ModelName]_[DevScore]_[TestScore]_[Epoch].h5" # Path to store models
 model.fit(epochs=40)
