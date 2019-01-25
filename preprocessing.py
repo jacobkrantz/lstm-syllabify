@@ -71,11 +71,13 @@ def process_data(paths, dataset_columns, dataset, mappings):
             for line in f:
                 line = line.strip('\n').split('\t')
                 if len(line) == 1:
-                    entries.append(copy(entry))
+                    # TEMP: only include length > 1
+                    if len(entry['raw_tokens']) > 1:
+                        entries.append(copy(entry))
                     entry['raw_tokens'] = []
                     entry['boundaries'] = []
                     continue
-                
+
                 entry['raw_tokens'].append(line[0])
                 entry['boundaries'].append(int(line[1]))
             

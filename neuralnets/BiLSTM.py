@@ -13,6 +13,9 @@ from keras.models import Model
 from keras.layers import *
 from .keraslayers.ChainCRF import ChainCRF
 
+from keras_contrib.layers import CRF
+from keras_contrib.losses import crf_loss
+
 class BiLSTM:
     """
     A bidirectional LSTM with optional CRF for NLP sequence tagging.
@@ -39,7 +42,8 @@ class BiLSTM:
             'early_stopping': 5,
             'mini_batch_size': 32,
             'feature_names': ['tokens'],
-            'embedding_size': 50
+            'embedding_size': 50,
+            'crf_activation':'linear'
         }
         if params != None:
             default_params.update(params)
@@ -120,14 +124,19 @@ class BiLSTM:
                 if classifier == 'softmax':
                     output = TimeDistributed(Dense(self.n_class_labels, activation='softmax'), name=model_name+'_softmax')(output)
                     lossFct = 'sparse_categorical_crossentropy'
-                elif classifier == 'crf':
+                elif classifier == 'crf': # use Philipp Gross' ChainCRF
                     output = TimeDistributed(Dense(self.n_class_labels, activation=None),
                                              name=model_name + '_hidden_lin_layer')(output)
                     crf = ChainCRF(name=model_name+'_crf')
                     output = crf(output)
                     lossFct = crf.sparse_loss
+                elif classifier == 'kc-crf': # use keras-contrib CRF
+                    output = TimeDistributed(Dense(self.n_class_labels, activation=None),
+                                             name=model_name + '_hidden_lin_layer')(output)
+                    crf = CRF(self.n_class_labels, learn_mode='join', activation=self.params['crf_activation'], sparse_target=True)
+                    output = crf(output)
+                    lossFct = crf_loss
                 elif isinstance(classifier, (list, tuple)) and classifier[0] == 'LSTM':
-                            
                     size = classifier[1]
                     if isinstance(self.params['dropout'], (list, tuple)): 
                         output = Bidirectional(LSTM(size, return_sequences=True, dropout=self.params['dropout'][0], recurrent_dropout=self.params['dropout'][1]), name=model_name+'_varLSTM_'+str(cnt))(output)
@@ -464,14 +473,11 @@ class BiLSTM:
 
 
     @staticmethod
-    def load_model(modelPath):
+    def load_model(model_path):
         import h5py
         import json
-        from .keraslayers.ChainCRF import create_custom_objects
 
-        model = keras.models.load_model(modelPath, custom_objects=create_custom_objects())
-
-        with h5py.File(modelPath, 'r') as f:
+        with h5py.File(model_path, 'r') as f:
             params = json.loads(f.attrs['params'])
             mappings = json.loads(f.attrs['mappings'])
             model_name = f.attrs['model_name']
@@ -479,6 +485,16 @@ class BiLSTM:
             vocab_size = f.attrs['vocab_size']
             n_class_labels = f.attrs['n_class_labels']
 
+        if params['classifier'] == ['kc-crf']:
+            from keras_contrib.layers import CRF
+            from keras_contrib.losses import crf_loss
+            keras.losses.crf_loss = crf_loss # HACK: integrate crf_loss directly into Keras. Sorry.
+            custom_objects = {'CRF': CRF, 'loss': crf_loss}
+        else:
+            from .keraslayers.ChainCRF import create_custom_objects
+            custom_objects=create_custom_objects()
+            
+        model = keras.models.load_model(model_path, custom_objects=custom_objects)
         bilstm = BiLSTM(params)
         bilstm.set_vocab_size(vocab_size, n_class_labels, mappings)
         bilstm.models = {model_name: model}

@@ -71,10 +71,12 @@ N_CLASS_LABELS
 """
 
 params_to_update = {
-    'classifier': ['softmax'], # either 'softmax' or 'crf'. crf is not ready yet.
+    'classifier': ['kc-crf'], # either 'softmax', 'kc-crf' (from keras-contrib) or 'crf' (by Philipp Gross). 
     'lstm_size': [100],
     'dropout': (0.25, 0.25),
-    'embedding_size': 100
+    'embedding_size': 100,
+    'early_stopping': 7,
+    'crf_activation': 'linear' # Only for kc-crf. Possible values: 'linear' (default), 'relu', 'tanh', 'softmax', others. See Keras Activations.
 }
 
 model = BiLSTM(params_to_update)
@@ -82,4 +84,4 @@ model.set_vocab_size(vocab_size, n_class_labels, mappings)
 model.set_dataset(datasets, data)
 model.store_results('results/english.csv') # Path to store performance scores for dev / test
 model.model_save_path = "models/[ModelName]_[DevScore]_[TestScore]_[Epoch].h5" # Path to store models
-model.fit(epochs=40)
+model.fit(epochs=50)

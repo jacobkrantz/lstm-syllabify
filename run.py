@@ -22,11 +22,16 @@ def run(model_path, input_path):
     for i, word in enumerate(words):
         joined = []
         for j, ch in enumerate(word['tokens']):
+            # pad tags with 0 to length of word. 
+            if len(tags[i]) < len(word['tokens']):
+                tags[i] += [0] * (len(word['tokens']) - len(tags[i]))
             joined.append((ch,tags[i][j]))
+
         for tup in joined:
             print(tup[0], end='')
             if tup[1] == 1:
                 print('-', end='')
+
         print('')
 
 if __name__ == '__main__':
