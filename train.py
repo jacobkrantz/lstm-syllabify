@@ -31,9 +31,8 @@ datasets = {
         }
 }
 
-# Load the embeddings and the dataset.
-# Once we have this training, we could store these in a pkl file for speed.
-embeddings, data, mappings, vocab_size, n_class_labels = load_dataset(datasets)
+# Load the embeddings and the dataset. Choose whether or not to pad the words.
+embeddings, data, mappings, vocab_size, n_class_labels = load_dataset(datasets, do_pad_words=True)
 
 """
 EMBEDDINGS (not used)
@@ -70,9 +69,13 @@ N_CLASS_LABELS
     - Default is two: either boundary (1) or no boundary (0)
 """
 
+# parameters 'use_cnn', 'cnn_filter_size', and 'cnn_filter_length' don't do anything yet. CNN development is WIP.
 params_to_update = {
-    'classifier': ['kc-crf'], # either 'softmax', 'kc-crf' (from keras-contrib) or 'crf' (by Philipp Gross). 
+    'classifier': ['crf'], # either 'softmax', 'kc-crf' (from keras-contrib) or 'crf' (by Philipp Gross). 
     'lstm_size': [100],
+    'use_cnn': False,
+    'cnn_filter_size': 30,
+    'cnn_filter_length': 3,
     'dropout': (0.25, 0.25),
     'embedding_size': 100,
     'early_stopping': 7,

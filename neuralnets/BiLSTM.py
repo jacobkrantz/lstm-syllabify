@@ -15,6 +15,8 @@ from .keraslayers.ChainCRF import ChainCRF
 
 from keras_contrib.layers import CRF
 from keras_contrib.losses import crf_loss
+import keras.backend as K
+import tensorflow as tf
 
 class BiLSTM:
     """
@@ -35,6 +37,9 @@ class BiLSTM:
             'dropout': (0.5,0.5),
             'classifier': ['Softmax'],
             'lstm_size': (100,),
+            'use_cnn': True,
+            'cnn_filter_size': 30,
+            'cnn_filter_length': 3,
             'custom_classifier': {},
             'optimizer': 'adam',
             'clipvalue': 0,
@@ -89,15 +94,9 @@ class BiLSTM:
         tokens = Embedding(input_dim=self.vocab_size, output_dim=self.params['embedding_size'], trainable=True, name='phone_embeddings')(tokens_input)
 
         inputNodes = [tokens_input]
-        mergeInputLayers = [tokens]
-
-        if len(mergeInputLayers) >= 2:
-            merged_input = concatenate(mergeInputLayers)
-        else:
-            merged_input = mergeInputLayers[0]
+        shared_layer = tokens
 
         # Add LSTMs
-        shared_layer = merged_input
         logging.info("lstm_size: %s" % str(self.params['lstm_size']))
         cnt = 1
         for size in self.params['lstm_size']:      
@@ -110,7 +109,20 @@ class BiLSTM:
                     shared_layer = TimeDistributed(Dropout(self.params['dropout']), name='shared_dropout_'+str(self.params['dropout'])+"_"+str(cnt))(shared_layer)
 
             cnt += 1
-            
+
+        # Add CNNs, similar to Ma and Hovy, 2016 but not char embeddings
+        if(self.params['use_cnn']):
+            pass
+            # cnn_layer = Conv1D(
+            #         filters=1, # self.params['cnn_filter_size'],
+            #         kernel_size=10, # self.params['cnn_filter_length'],
+            #         strides=10,
+            #         padding='same'
+            #     )(tokens)
+            # cnn_layer = GlobalMaxPooling1D(), name="pooling")(cnn_layer)
+            # shared_layer = concatenate([shared_layer,cnn_layer])
+
+        # Add softmax and output classifier
         for model_name in self.model_names:
             output = shared_layer
             
