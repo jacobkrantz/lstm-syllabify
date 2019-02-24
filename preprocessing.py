@@ -14,6 +14,7 @@ def load_dataset(datasets, do_pad_words):
     embeddings = []
     mappings = {}
     data = {}
+    word_length = -1
 
     for datasetName, dataset in datasets.items():
         dataset_columns = dataset['columns']
@@ -27,11 +28,11 @@ def load_dataset(datasets, do_pad_words):
         mappings, vocab_size, n_class_labels = make_mappings(paths.values(), do_pad_words)
         data[datasetName] = process_data(paths, dataset_columns, dataset, mappings)
         if do_pad_words:
-            data[datasetName] = pad_words(data[datasetName])
+            data[datasetName], word_length = pad_words(data[datasetName])
 
     # currently do not have pre-trained phonetic embeddings. 
     # returning embeddings = []. Embeddings mst be trained.
-    return (embeddings, data, mappings, vocab_size, n_class_labels)
+    return (embeddings, data, mappings, vocab_size, n_class_labels, word_length)
 
 def pad_words(data):
     """
@@ -61,7 +62,7 @@ def pad_words(data):
             assert(len(word['tokens']) == max_len)
             assert(len(word['boundaries']) == max_len)
 
-    return data
+    return data, max_len
 
 def make_mappings(paths, pad_words):
     """

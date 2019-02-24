@@ -55,10 +55,11 @@ class BiLSTM:
         self.params = default_params
 
 
-    def set_vocab_size(self, vocab_size, n_class_labels, mappings):
+    def set_vocab_size(self, vocab_size, n_class_labels, word_length, mappings):
         # class labels are syllable boundary labels
         self.vocab_size = vocab_size
         self.n_class_labels = n_class_labels
+        self.word_length = word_length
         self.mappings = mappings # used indirectly during model reload
 
 
@@ -90,7 +91,9 @@ class BiLSTM:
     def build_model(self):
         self.models = {}
 
-        tokens_input = Input(shape=(None,), dtype='int32', name='phones_input')
+        if self.word_length <= 0: # variable length words
+            self.word_length = None
+        tokens_input = Input(shape=(self.word_length,), dtype='int32', name='phones_input') 
         tokens = Embedding(input_dim=self.vocab_size, output_dim=self.params['embedding_size'], trainable=True, name='phone_embeddings')(tokens_input)
 
         inputNodes = [tokens_input]
@@ -482,7 +485,7 @@ class BiLSTM:
             h5file.attrs['label_key'] = self.datasets[model_name]['label']
             h5file.attrs['vocab_size'] = self.vocab_size
             h5file.attrs['n_class_labels'] = self.n_class_labels
-
+            h5file.attrs['word_length'] = self.word_length if self.word_length != None else -1
 
     @staticmethod
     def load_model(model_path):
@@ -496,6 +499,7 @@ class BiLSTM:
             label_key = f.attrs['label_key']
             vocab_size = f.attrs['vocab_size']
             n_class_labels = f.attrs['n_class_labels']
+            word_length = f.attrs['word_length']
 
         if params['classifier'] == ['kc-crf']:
             from keras_contrib.layers import CRF
@@ -508,7 +512,7 @@ class BiLSTM:
             
         model = keras.models.load_model(model_path, custom_objects=custom_objects)
         bilstm = BiLSTM(params)
-        bilstm.set_vocab_size(vocab_size, n_class_labels, mappings)
+        bilstm.set_vocab_size(vocab_size, n_class_labels, word_length, mappings)
         bilstm.models = {model_name: model}
         bilstm.label_keys = {model_name: label_key}
         return bilstm

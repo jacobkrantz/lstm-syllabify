@@ -32,7 +32,7 @@ datasets = {
 }
 
 # Load the embeddings and the dataset. Choose whether or not to pad the words.
-embeddings, data, mappings, vocab_size, n_class_labels = load_dataset(datasets, do_pad_words=True)
+embeddings, data, mappings, vocab_size, n_class_labels, word_length = load_dataset(datasets, do_pad_words=True)
 
 """
 EMBEDDINGS (not used)
@@ -83,7 +83,7 @@ params_to_update = {
 }
 
 model = BiLSTM(params_to_update)
-model.set_vocab_size(vocab_size, n_class_labels, mappings)
+model.set_vocab_size(vocab_size, n_class_labels, word_length, mappings)
 model.set_dataset(datasets, data)
 model.store_results('results/english.csv') # Path to store performance scores for dev / test
 model.model_save_path = "models/[ModelName]_[DevScore]_[TestScore]_[Epoch].h5" # Path to store models
