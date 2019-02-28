@@ -6,10 +6,15 @@ potential problem: running an old model may fail due to mappings
     TODO: fix mappings to a specified map by storing them in pkl file.
 """
 
-def load_dataset(datasets):
+def load_dataset(datasets, do_pad_words):
+    """
+    if pad_words, then each word in every dataset will be padded to the length of the longest word. PAD token is integer 0.
+    All fields would be padded, which include 'tokens', 'raw_tokens', and 'boundaries'. This makes the training take 75s per epoch on just LSTM (~2x longer).
+    """
     embeddings = []
     mappings = {}
     data = {}
+    word_length = -1
 
     for datasetName, dataset in datasets.items():
         dataset_columns = dataset['columns']
@@ -20,14 +25,46 @@ def load_dataset(datasets):
         paths = {'train_matrix': trainData, 'dev_matrix': devData, 'test_matrix': testData}
 
         logging.info(":: Transform " + datasetName + " dataset ::")
-        mappings, vocab_size, n_class_labels = make_mappings(paths.values())
+        mappings, vocab_size, n_class_labels = make_mappings(paths.values(), do_pad_words)
         data[datasetName] = process_data(paths, dataset_columns, dataset, mappings)
+        if do_pad_words:
+            data[datasetName], word_length = pad_words(data[datasetName])
 
     # currently do not have pre-trained phonetic embeddings. 
     # returning embeddings = []. Embeddings mst be trained.
-    return (embeddings, data, mappings, vocab_size, n_class_labels)
+    return (embeddings, data, mappings, vocab_size, n_class_labels, word_length)
 
-def make_mappings(paths):
+def pad_words(data):
+    """
+    Pad each word to the length of the longest word. Token for PAD is the integer 0.
+    """
+
+    # Find the length of the longest word in the dataset for padding purposes.
+    max_len = 0
+    tokens = set()
+    phones = set()
+    for mat in ['dev_matrix', 'train_matrix', 'test_matrix']:
+        for word in data[mat]:
+            if len(word['raw_tokens']) > max_len:
+                max_len = len(word['raw_tokens'])
+            for tok in word['tokens']:
+                tokens.add(tok)
+            for phone in word['raw_tokens']:
+                phones.add(phone)
+
+    # pad both 'tokens' with 0 and 'raw_tokens' with 'PAD'
+    for mat in ['dev_matrix', 'train_matrix', 'test_matrix']:
+        for word in data[mat]:
+            word['raw_tokens'] += ['PAD' for _ in range(max_len - len(word['raw_tokens']))]
+            word['tokens'] += [0 for _ in range(max_len - len(word['tokens']))]
+            word['boundaries'] += [0 for _ in range(max_len - len(word['boundaries']))]
+            assert(len(word['raw_tokens']) == max_len)
+            assert(len(word['tokens']) == max_len)
+            assert(len(word['boundaries']) == max_len)
+
+    return data, max_len
+
+def make_mappings(paths, pad_words):
     """
     creates a unique mapping from phone to integer.
     Args:
@@ -51,9 +88,10 @@ def make_mappings(paths):
 
     mappings = {}
     for i, phone in enumerate(all_phones):
-        mappings[phone] = i
+        mappings[phone] = i + 1 if pad_words else i # reserve 0 for padding
 
-    return mappings, len(mappings), len(class_labels)
+    vocab_size = len(mappings) + 1 if pad_words else len(mappings)
+    return mappings, vocab_size, len(class_labels)
 
 def process_data(paths, dataset_columns, dataset, mappings):
     """
