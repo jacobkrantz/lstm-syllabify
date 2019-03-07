@@ -36,13 +36,13 @@ class BiLSTM:
         default_params = {
             'dropout': (0.5,0.5),
             'classifier': ['Softmax'],
+            'which_rnn': 'GRU', # either 'LSTM' or 'GRU'
             'lstm_size': (100,),
             'use_cnn': False,
             'cnn_layers': 2,
             'cnn_num_filters': 20,
             'cnn_filter_size': 3,
-            'cnn_max_pool_size': 2, # if None of False, do not use MaxPooling
-            'custom_classifier': {},
+            'cnn_max_pool_size': 2, # if None or False, do not use MaxPooling
             'optimizer': 'adam',
             'clipvalue': 0,
             'clipnorm': 1,
@@ -95,99 +95,125 @@ class BiLSTM:
 
         if self.word_length <= 0: # variable length words
             self.word_length = None
-        tokens_input = Input(shape=(self.word_length,), dtype='float32', name='phones_input') 
-        tokens = Embedding(input_dim=self.vocab_size, output_dim=self.params['embedding_size'], trainable=True, name='phone_embeddings')(tokens_input)
-        # tokens.shape = (batch_size, word_length, embedding size)
 
-        inputNodes = [tokens_input]
-        shared_layer = tokens
+        tokens_input = Input(
+            shape = (self.word_length,), # use explicit word length for CNNs to work
+            dtype = 'float32',
+            name = 'phones_input'
+        )
 
-        # Add LSTMs
+        tokens = Embedding(
+            input_dim = self.vocab_size,
+            output_dim = self.params['embedding_size'],
+            trainable = True,
+            name = 'phone_embeddings'
+        )(tokens_input) # output shape: (batch_size, word_length, embedding size)
+
+        # Add recurrent layers
+        if(self.params['which_rnn'] == 'GRU'):
+            rnn_func = GRU
+        elif(self.params['which_rnn'] == 'LSTM'):
+            rnn_func = LSTM
+        else:
+            assert(False) # invalid rnn type
+        recurrent_layer = tokens
         logging.info("lstm_size: %s" % str(self.params['lstm_size']))
         cnt = 1
-        for size in self.params['lstm_size']:      
-            if isinstance(self.params['dropout'], (list, tuple)):  
-                shared_layer = Bidirectional(LSTM(size, return_sequences=True, dropout=self.params['dropout'][0], recurrent_dropout=self.params['dropout'][1]), name='shared_varLSTM_'+str(cnt))(shared_layer)
+        for size in self.params['lstm_size']:
+            if isinstance(self.params['dropout'], (list, tuple)):
+                recurrent_layer = Bidirectional(rnn_func(
+                        units = size,
+                        return_sequences = True,
+                        dropout = self.params['dropout'][0],
+                        recurrent_dropout = self.params['dropout'][1]
+                ), name = 'Bi'+ self.params['which_rnn'] +'_' + str(cnt)
+                )(recurrent_layer)
             else:
                 """ Naive dropout """
-                shared_layer = Bidirectional(LSTM(size, return_sequences=True), name='shared_LSTM_'+str(cnt))(shared_layer) 
+                recurrent_layer = Bidirectional(rnn_func(
+                        units = size,
+                        return_sequences = True
+                    ), name = 'LSTM_' + str(cnt)
+                )(recurrent_layer)
+
                 if self.params['dropout'] > 0.0:
-                    shared_layer = TimeDistributed(Dropout(self.params['dropout']), name='shared_dropout_'+str(self.params['dropout'])+"_"+str(cnt))(shared_layer)
+                    recurrent_layer = TimeDistributed(Dropout(
+                            rate = self.params['dropout']
+                        ), name = 'dropout_' + str(self.params['dropout']) + "_"+str(cnt)
+                    )(recurrent_layer)
 
             cnt += 1
 
         # Add CNNs, inspired by Ma and Hovy, 2016. CNNs are parallel to LSTM instead of prior.
         if(self.params['use_cnn'] and self.params['cnn_layers'] > 0):
             cnn_layer = tokens
-            print('tokens shape initial:\t\t\t', tokens.shape) # how to reshape::: re = Reshape((tokens.shape[1],tokens.shape[2],) + (1, ))(tokens) #  + (1, )
+            # print('tokens shape initial:\t\t\t', tokens.shape) 
+            # how to reshape::: re = Reshape((tokens.shape[1],tokens.shape[2],) + (1, ))(tokens) #  + (1, )
 
             for i in range(self.params['cnn_layers']):
-                layer_name = "cnn_"+str(i+1)
                 cnn_layer = Conv1D(
-                    filters=self.params['cnn_num_filters'],
-                    kernel_size=self.params['cnn_filter_size'],
-                    padding='same',
-                    name=layer_name
+                    filters = self.params['cnn_num_filters'],
+                    kernel_size = self.params['cnn_filter_size'],
+                    padding = 'same',
+                    name = "cnn_" + str(i+1)
                 )(cnn_layer)
-                print(layer_name + ' shape after Conv1D:\t\t', cnn_layer.shape)
                 
                 if(self.params['cnn_max_pool_size']):
                     # maintain dimensionality (stride = 1)
-                    layer_name = 'max_pooling_'+str(i+1)
                     cnn_layer = MaxPooling1D(
-                        pool_size=self.params['cnn_max_pool_size'],
-                        strides=1,
-                        padding='same',
-                        name=layer_name
+                        pool_size = self.params['cnn_max_pool_size'],
+                        strides = 1,
+                        padding = 'same',
+                        name = 'max_pooling_' + str(i+1)
                     )(cnn_layer)
-                    print(layer_name + ' shape after MaxPooling1D:\t', cnn_layer.shape)
 
-            # concatenating the CNN with the LSTM essentially tacks on the cnn vector to the end of each lstm time-step vector.
-            print('shared_layer shape before concat:\t', shared_layer.shape)
-            shared_layer = concatenate([shared_layer, cnn_layer])
-            print('shared_layer shape after concat:\t', shared_layer.shape)
+        # concatenating the CNN with the LSTM essentially tacks on the cnn vector to the end of each lstm time-step vector.
+        if(self.params['use_cnn'] and self.params['cnn_layers'] > 0):
+            concat_layer = concatenate([recurrent_layer, cnn_layer])
+        else:
+            concat_layer = recurrent_layer
 
         # Add output classifier
         for model_name in self.model_names:
-            output = shared_layer
-            
-            modelClassifier = self.params['custom_classifier'][model_name] if model_name in self.params['custom_classifier'] else self.params['classifier']
-
-            if not isinstance(modelClassifier, (tuple, list)):
-                modelClassifier = [modelClassifier]
-            
-            cnt = 1
-            for classifier in modelClassifier:
+            output = concat_layer
+            for classifier in [self.params['classifier']]:
                 if classifier == 'softmax':
-                    output = TimeDistributed(Dense(self.n_class_labels, activation='softmax'), name=model_name+'_softmax')(output)
+                    output = TimeDistributed(Dense(
+                            units = self.n_class_labels,
+                            activation = 'softmax'
+                        ), name = model_name + '_softmax'
+                    )(output)
                     lossFct = 'sparse_categorical_crossentropy'
+                
                 elif classifier == 'crf': # use Philipp Gross' ChainCRF
-                    output = TimeDistributed(Dense(self.n_class_labels, activation=None),
-                                             name=model_name + '_hidden_lin_layer')(output)
-                    print('output shape before CRF:\t\t', output.shape)
+                    output = TimeDistributed(Dense(
+                            units = self.n_class_labels,
+                            activation = None
+                        ), name = model_name + '_hidden_lin_layer'
+                    )(output)
                     crf = ChainCRF(name=model_name+'_crf')
                     output = crf(output)
                     lossFct = crf.sparse_loss
+                
                 elif classifier == 'kc-crf': # use keras-contrib CRF
-                    output = TimeDistributed(Dense(self.n_class_labels, activation=None),
-                                             name=model_name + '_hidden_lin_layer')(output)
-                    crf = CRF(self.n_class_labels, learn_mode='join', activation=self.params['crf_activation'], sparse_target=True)
+                    output = TimeDistributed(Dense(
+                            units = self.n_class_labels,
+                            activation = None
+                        ), name = model_name + '_hidden_lin_layer'
+                    )(output)
+
+                    crf = CRF(
+                        units = self.n_class_labels,
+                        learn_mode = 'join',
+                        activation = self.params['crf_activation'],
+                        sparse_target = True
+                    )
                     output = crf(output)
                     lossFct = crf_loss
-                elif isinstance(classifier, (list, tuple)) and classifier[0] == 'LSTM':
-                    size = classifier[1]
-                    if isinstance(self.params['dropout'], (list, tuple)): 
-                        output = Bidirectional(LSTM(size, return_sequences=True, dropout=self.params['dropout'][0], recurrent_dropout=self.params['dropout'][1]), name=model_name+'_varLSTM_'+str(cnt))(output)
-                    else:
-                        """ Naive dropout """ 
-                        output = Bidirectional(LSTM(size, return_sequences=True), name=model_name+'_LSTM_'+str(cnt))(output) 
-                        if self.params['dropout'] > 0.0:
-                            output = TimeDistributed(Dropout(self.params['dropout']), name=model_name+'_dropout_'+str(self.params['dropout'])+"_"+str(cnt))(output)                    
-                else:
-                    assert(False) #Wrong classifier
                     
-                cnt += 1
-                
+                else:
+                    assert(False) # bad classifier option
+
             # :: Parameters for the optimizer ::
             optimizerParams = {}
             if 'clipnorm' in self.params and self.params['clipnorm'] != None and  self.params['clipnorm'] > 0:
@@ -209,7 +235,7 @@ class BiLSTM:
             elif self.params['optimizer'].lower() == 'sgd':
                 opt = SGD(lr=0.1, **optimizerParams)
             
-            model = Model(inputs=inputNodes, outputs=[output])
+            model = Model(inputs=[tokens_input], outputs=[output])
             model.compile(loss=lossFct, optimizer=opt)
             model.summary(line_length=125)
             

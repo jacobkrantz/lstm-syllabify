@@ -71,15 +71,25 @@ N_CLASS_LABELS
 
 # parameters 'use_cnn', 'cnn_filter_size', and 'cnn_filter_length' don't do anything yet. CNN development is WIP.
 params_to_update = {
-    'classifier': ['crf'], # either 'softmax', 'kc-crf' (from keras-contrib) or 'crf' (by Philipp Gross). 
+    # LSTM related
+    'which_rnn': 'LSTM', # either 'LSTM' or 'GRU'
     'lstm_size': [100],
+    'dropout': (0.25, 0.25),
+
+    # CNN related
     'use_cnn': True,
+    'cnn_layers': 2,
     'cnn_num_filters': 20,
     'cnn_filter_size': 3,
-    'dropout': (0.25, 0.25),
+    'cnn_max_pool_size': 2, # if None or False, do not use MaxPooling
+
+    # CRF related
+    'classifier': 'crf', # either 'softmax', 'kc-crf' (from keras-contrib) or 'crf' (by Philipp Gross).
+    'crf_activation': 'linear', # Only for kc-crf. Possible values: 'linear' (default), 'relu', 'tanh', 'softmax', others. See Keras Activations.
+
+    # general params
     'embedding_size': 100,
-    'early_stopping': 7,
-    'crf_activation': 'linear' # Only for kc-crf. Possible values: 'linear' (default), 'relu', 'tanh', 'softmax', others. See Keras Activations.
+    'early_stopping': 7
 }
 
 model = BiLSTM(params_to_update)
@@ -87,4 +97,4 @@ model.set_vocab_size(vocab_size, n_class_labels, word_length, mappings)
 model.set_dataset(datasets, data)
 model.store_results('results/english.csv') # Path to store performance scores for dev / test
 model.model_save_path = "models/[ModelName]_[DevScore]_[TestScore]_[Epoch].h5" # Path to store models
-model.fit(epochs=50)
+model.fit(epochs = 50)
