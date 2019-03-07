@@ -37,9 +37,11 @@ class BiLSTM:
             'dropout': (0.5,0.5),
             'classifier': ['Softmax'],
             'lstm_size': (100,),
-            'use_cnn': True,
-            'cnn_filter_size': 30,
-            'cnn_filter_length': 3,
+            'use_cnn': False,
+            'cnn_layers': 2,
+            'cnn_num_filters': 20,
+            'cnn_filter_size': 3,
+            'cnn_max_pool_size': 2, # if None of False, do not use MaxPooling
             'custom_classifier': {},
             'optimizer': 'adam',
             'clipvalue': 0,
@@ -93,8 +95,9 @@ class BiLSTM:
 
         if self.word_length <= 0: # variable length words
             self.word_length = None
-        tokens_input = Input(shape=(self.word_length,), dtype='int32', name='phones_input') 
+        tokens_input = Input(shape=(self.word_length,), dtype='float32', name='phones_input') 
         tokens = Embedding(input_dim=self.vocab_size, output_dim=self.params['embedding_size'], trainable=True, name='phone_embeddings')(tokens_input)
+        # tokens.shape = (batch_size, word_length, embedding size)
 
         inputNodes = [tokens_input]
         shared_layer = tokens
@@ -113,19 +116,38 @@ class BiLSTM:
 
             cnt += 1
 
-        # Add CNNs, similar to Ma and Hovy, 2016 but not char embeddings
-        if(self.params['use_cnn']):
-            pass
-            # cnn_layer = Conv1D(
-            #         filters=1, # self.params['cnn_filter_size'],
-            #         kernel_size=10, # self.params['cnn_filter_length'],
-            #         strides=10,
-            #         padding='same'
-            #     )(tokens)
-            # cnn_layer = GlobalMaxPooling1D(), name="pooling")(cnn_layer)
-            # shared_layer = concatenate([shared_layer,cnn_layer])
+        # Add CNNs, inspired by Ma and Hovy, 2016. CNNs are parallel to LSTM instead of prior.
+        if(self.params['use_cnn'] and self.params['cnn_layers'] > 0):
+            cnn_layer = tokens
+            print('tokens shape initial:\t\t\t', tokens.shape) # how to reshape::: re = Reshape((tokens.shape[1],tokens.shape[2],) + (1, ))(tokens) #  + (1, )
 
-        # Add softmax and output classifier
+            for i in range(self.params['cnn_layers']):
+                layer_name = "cnn_"+str(i+1)
+                cnn_layer = Conv1D(
+                    filters=self.params['cnn_num_filters'],
+                    kernel_size=self.params['cnn_filter_size'],
+                    padding='same',
+                    name=layer_name
+                )(cnn_layer)
+                print(layer_name + ' shape after Conv1D:\t\t', cnn_layer.shape)
+                
+                if(self.params['cnn_max_pool_size']):
+                    # maintain dimensionality (stride = 1)
+                    layer_name = 'max_pooling_'+str(i+1)
+                    cnn_layer = MaxPooling1D(
+                        pool_size=self.params['cnn_max_pool_size'],
+                        strides=1,
+                        padding='same',
+                        name=layer_name
+                    )(cnn_layer)
+                    print(layer_name + ' shape after MaxPooling1D:\t', cnn_layer.shape)
+
+            # concatenating the CNN with the LSTM essentially tacks on the cnn vector to the end of each lstm time-step vector.
+            print('shared_layer shape before concat:\t', shared_layer.shape)
+            shared_layer = concatenate([shared_layer, cnn_layer])
+            print('shared_layer shape after concat:\t', shared_layer.shape)
+
+        # Add output classifier
         for model_name in self.model_names:
             output = shared_layer
             
@@ -142,6 +164,7 @@ class BiLSTM:
                 elif classifier == 'crf': # use Philipp Gross' ChainCRF
                     output = TimeDistributed(Dense(self.n_class_labels, activation=None),
                                              name=model_name + '_hidden_lin_layer')(output)
+                    print('output shape before CRF:\t\t', output.shape)
                     crf = ChainCRF(name=model_name+'_crf')
                     output = crf(output)
                     lossFct = crf.sparse_loss

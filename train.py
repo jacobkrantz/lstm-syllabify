@@ -73,9 +73,9 @@ N_CLASS_LABELS
 params_to_update = {
     'classifier': ['crf'], # either 'softmax', 'kc-crf' (from keras-contrib) or 'crf' (by Philipp Gross). 
     'lstm_size': [100],
-    'use_cnn': False,
-    'cnn_filter_size': 30,
-    'cnn_filter_length': 3,
+    'use_cnn': True,
+    'cnn_num_filters': 20,
+    'cnn_filter_size': 3,
     'dropout': (0.25, 0.25),
     'embedding_size': 100,
     'early_stopping': 7,
