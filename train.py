@@ -74,12 +74,12 @@ params_to_update = {
     # LSTM related
     'which_rnn': 'LSTM', # either 'LSTM' or 'GRU'
     'lstm_size': [100],
-    'dropout': (0.25, 0.25),
+    'dropout': 0.25, # (0.25, 0.25), # tuple dropout is for recurrent dropout and cannot work with GPU computation.
 
     # CNN related
     'use_cnn': True,
     'cnn_layers': 2,
-    'cnn_num_filters': 20,
+    'cnn_num_filters': 40,
     'cnn_filter_size': 3,
     'cnn_max_pool_size': 2, # if None or False, do not use MaxPooling
 
@@ -88,6 +88,8 @@ params_to_update = {
     'crf_activation': 'linear', # Only for kc-crf. Possible values: 'linear' (default), 'relu', 'tanh', 'softmax', others. See Keras Activations.
 
     # general params
+    'mini_batch_size': 512,
+    'using_gpu': True,
     'embedding_size': 100,
     'early_stopping': 7
 }

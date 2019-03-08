@@ -50,7 +50,8 @@ class BiLSTM:
             'mini_batch_size': 32,
             'feature_names': ['tokens'],
             'embedding_size': 50,
-            'crf_activation':'linear'
+            'crf_activation':'linear',
+            'using_gpu': True
         }
         if params != None:
             default_params.update(params)
@@ -111,9 +112,9 @@ class BiLSTM:
 
         # Add recurrent layers
         if(self.params['which_rnn'] == 'GRU'):
-            rnn_func = GRU
+            rnn_func = CuDNNGRU if self.params['using_gpu'] else GRU
         elif(self.params['which_rnn'] == 'LSTM'):
-            rnn_func = LSTM
+            rnn_func = CuDNNLSTM if self.params['using_gpu'] else LSTM
         else:
             assert(False) # invalid rnn type
         recurrent_layer = tokens
@@ -121,6 +122,9 @@ class BiLSTM:
         cnt = 1
         for size in self.params['lstm_size']:
             if isinstance(self.params['dropout'], (list, tuple)):
+                if(self.params['using_gpu']):
+                    raise ValueError('recurrent_dropout only works with CPU computation. Use simple dropout for GPU.')
+
                 recurrent_layer = Bidirectional(rnn_func(
                         units = size,
                         return_sequences = True,
@@ -128,6 +132,7 @@ class BiLSTM:
                         recurrent_dropout = self.params['dropout'][1]
                 ), name = 'Bi'+ self.params['which_rnn'] +'_' + str(cnt)
                 )(recurrent_layer)
+
             else:
                 """ Naive dropout """
                 recurrent_layer = Bidirectional(rnn_func(
