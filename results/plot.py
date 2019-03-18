@@ -14,6 +14,19 @@ def plot(csv_file):
     Plots a graph of training accuracies as given by the model results output file.
     Args:
         csv_file (str): file name with csv extension.
+
+    csv structure:
+    (
+        0 epoch,
+        1 model name,
+        2 dev word accuracy, 
+        3 word accuracy,
+        4 best dev word accuracy,
+        5 best test word accuracy,
+        6 training time for epoch (s),
+        7 total training time thus far (s),
+        8 evaluation time
+    )
     """
     df = pd.read_csv(csv_file, delimiter='\t', header=None, usecols=[1,2,3,4,5])
 

@@ -398,7 +398,19 @@ class BiLSTM:
                     no_improvement_since += 1
                     
                 if self.results_save_path != None:
-                    self.results_save_path.write("\t".join(map(str, [epoch + 1, model_name, dev_score, test_score, max_dev_score[model_name], max_test_score[model_name]])))
+                    self.results_save_path.write(
+                        "\t".join(map(str, [
+                            epoch + 1,
+                            model_name,
+                            dev_score,
+                            test_score,
+                            max_dev_score[model_name],
+                            max_test_score[model_name],
+                            time_diff, # training time for this epoch
+                            total_train_time, # training time for all epochs
+                            time.time() - start_time # time for evaluation during this epoch
+                        ]))
+                    )
                     self.results_save_path.write("\n")
                     self.results_save_path.flush()
                 
@@ -410,8 +422,8 @@ class BiLSTM:
             if self.params['early_stopping']  > 0 and no_improvement_since >= self.params['early_stopping']:
                 logging.info("!!! Early stopping, no improvement after "+str(no_improvement_since)+" epochs !!!")
                 break
-            
-            
+
+
     def tagWords(self, words):
         """
         words: [{'raw_tokens': ['S', 'V', 't', 'P', 'd'], 'tokens': [11, 5, 43, 36, 8]}, ...]

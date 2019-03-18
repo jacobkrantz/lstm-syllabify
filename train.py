@@ -91,7 +91,8 @@ params_to_update = {
     'mini_batch_size': 512,
     'using_gpu': True,
     'embedding_size': 100,
-    'early_stopping': 7
+    'early_stopping': 10,
+    'optimizer': 'adam'
 }
 
 model = BiLSTM(params_to_update)
@@ -99,4 +100,4 @@ model.set_vocab_size(vocab_size, n_class_labels, word_length, mappings)
 model.set_dataset(datasets, data)
 model.store_results('results/english.csv') # Path to store performance scores for dev / test
 model.model_save_path = "models/[ModelName]_[DevScore]_[TestScore]_[Epoch].h5" # Path to store models
-model.fit(epochs = 50)
+model.fit(epochs = 60)
