@@ -114,4 +114,3 @@ for size in size_list:
 		model.store_results(file_path) # Path to store performance scores for dev / test
 		model.model_save_path = "models/[ModelName]_[DevScore]_[TestScore]_[Epoch].h5" # Path to store models
 		model.fit(epochs = 50)
-		
