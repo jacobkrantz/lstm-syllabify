@@ -13,8 +13,8 @@ from keras.models import Model
 from keras.layers import *
 from .keraslayers.ChainCRF import ChainCRF
 
-from keras_contrib.layers import CRF
-from keras_contrib.losses import crf_loss
+# from keras_contrib.layers import CRF
+# from keras_contrib.losses import crf_loss
 import keras.backend as K
 import tensorflow as tf
 
