@@ -12,7 +12,7 @@ How to call:
     >>> python3 analyze_res_folder.py (folder-name)
     where folder-name is the directory within ./results/ to be analyzed
 Example:
-    >>> python3 analyze_res_folder.py 2048
+    >>> python3 analyze_res_folder.py batch_and_variation/2048
 
 csv column structure:
     (
@@ -32,6 +32,8 @@ def analyze(res_dir_name):
     res_dir_name = str(res_dir_name)
     epoch_finished_at = []
     training_times = []
+    epoch_training_time = []
+    epoch_eval_time = []
     best_dev_accuracy = []
     test_accuracy = []
 
@@ -46,7 +48,8 @@ def analyze(res_dir_name):
 
             # ignore all lines but the last
             for epoch in csv_reader:
-                continue
+                epoch_training_time.append(float(epoch[6]))
+                epoch_eval_time.append(float(epoch[8]))
             
             epoch_finished_at.append(int(epoch[0]))
             training_times.append(int(float(epoch[7])))
@@ -68,7 +71,10 @@ def analyze(res_dir_name):
     print('Standard deviation dev:\t\t ', '{number:.{digits}f}'.format(number=100*statistics.stdev(best_dev_accuracy),digits=3))
     print('Average test accuracy:\t\t', '{number:.{digits}f}'.format(number=100*np.mean(test_accuracy),digits=3))
     print('Standard deviation test\t\t ', '{number:.{digits}f}'.format(number=100*statistics.stdev(test_accuracy),digits=3))
-    print()
+    print('')
+    print('Average total training time:\t', '{number:.{digits}f}'.format(number=np.mean(training_times),digits=3))
+    print('Average epoch training time:\t', '{number:.{digits}f}'.format(number=np.mean(epoch_training_time),digits=3))
+    print('Average epoch eval time:\t', '{number:.{digits}f}'.format(number=np.mean(epoch_eval_time),digits=3))
     print('Average number of total epochs:\t', '{number:.{digits}f}'.format(number=np.mean(epoch_finished_at),digits=2))
     print('number of experiments analyzed:\t', len(epoch_finished_at))
 

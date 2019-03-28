@@ -37,7 +37,7 @@ class BiLSTM:
             'dropout': (0.5,0.5),
             'classifier': ['Softmax'],
             'which_rnn': 'GRU', # either 'LSTM' or 'GRU'
-            'lstm_size': (100,),
+            'lstm_size': 100,
             'use_cnn': False,
             'cnn_layers': 2,
             'cnn_num_filters': 20,
@@ -120,34 +120,33 @@ class BiLSTM:
         recurrent_layer = tokens
         logging.info("lstm_size: %s" % str(self.params['lstm_size']))
         cnt = 1
-        for size in self.params['lstm_size']:
-            if isinstance(self.params['dropout'], (list, tuple)):
-                if(self.params['using_gpu']):
-                    raise ValueError('recurrent_dropout only works with CPU computation. Use simple dropout for GPU.')
+        if isinstance(self.params['dropout'], (list, tuple)):
+            if(self.params['using_gpu']):
+                raise ValueError('recurrent_dropout only works with CPU computation. Use simple dropout for GPU.')
 
-                recurrent_layer = Bidirectional(rnn_func(
-                        units = size,
-                        return_sequences = True,
-                        dropout = self.params['dropout'][0],
-                        recurrent_dropout = self.params['dropout'][1]
-                ), name = 'Bi'+ self.params['which_rnn'] +'_' + str(cnt)
+            recurrent_layer = Bidirectional(rnn_func(
+                    units = self.params['lstm_size'],
+                    return_sequences = True,
+                    dropout = self.params['dropout'][0],
+                    recurrent_dropout = self.params['dropout'][1]
+            ), name = 'Bi'+ self.params['which_rnn'] +'_' + str(cnt)
+            )(recurrent_layer)
+
+        else:
+            """ Naive dropout """
+            recurrent_layer = Bidirectional(rnn_func(
+                    units = self.params['lstm_size'],
+                    return_sequences = True
+                ), name = 'LSTM_' + str(cnt)
+            )(recurrent_layer)
+
+            if self.params['dropout'] > 0.0:
+                recurrent_layer = TimeDistributed(Dropout(
+                        rate = self.params['dropout']
+                    ), name = 'dropout_' + str(self.params['dropout']) + "_"+str(cnt)
                 )(recurrent_layer)
 
-            else:
-                """ Naive dropout """
-                recurrent_layer = Bidirectional(rnn_func(
-                        units = size,
-                        return_sequences = True
-                    ), name = 'LSTM_' + str(cnt)
-                )(recurrent_layer)
-
-                if self.params['dropout'] > 0.0:
-                    recurrent_layer = TimeDistributed(Dropout(
-                            rate = self.params['dropout']
-                        ), name = 'dropout_' + str(self.params['dropout']) + "_"+str(cnt)
-                    )(recurrent_layer)
-
-            cnt += 1
+        cnt += 1
 
         # Add CNNs, inspired by Ma and Hovy, 2016. CNNs are parallel to LSTM instead of prior.
         if(self.params['use_cnn'] and self.params['cnn_layers'] > 0):

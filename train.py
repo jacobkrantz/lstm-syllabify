@@ -72,9 +72,6 @@ PATH = os.getcwd() + '/results'
 def create_directory(size):
 	os.mkdir(PATH + "/" + str(size))
 
-# parameters 'use_cnn', 'cnn_filter_size', and 'cnn_filter_length' don't do anything yet. CNN development is WIP.
-
-
 # Max run for batch sizes 
 size_list = [2 ** x for x in range(5,11)]
 for size in size_list: 
@@ -87,7 +84,7 @@ for size in size_list:
         params_to_update = {
             # LSTM related
             'which_rnn': 'LSTM', # either 'LSTM' or 'GRU'
-            'lstm_size': [100],
+            'lstm_size': 100,
             'dropout': 0.25, # (0.25, 0.25), # tuple dropout is for recurrent dropout and cannot work with GPU computation.
 
             # CNN related
@@ -105,7 +102,7 @@ for size in size_list:
             'mini_batch_size': size,
             'using_gpu': True,
             'embedding_size': 100,
-            'early_stopping': 7
+            'early_stopping': 10
         }
 
         model = BiLSTM(params_to_update)
@@ -113,4 +110,4 @@ for size in size_list:
         model.set_dataset(datasets, data)
         model.store_results(file_path) # Path to store performance scores for dev / test
         model.model_save_path = "models/[ModelName]_[DevScore]_[TestScore]_[Epoch].h5" # Path to store models
-        model.fit(epochs = 50)
+        model.fit(epochs = 120)
