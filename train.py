@@ -68,46 +68,58 @@ N_CLASS_LABELS
     - number of possible types of syllable boundaries. 
     - Default is two: either boundary (1) or no boundary (0)
 """
-PATH = os.getcwd() + '/results'
+PATH = os.getcwd() + '/results/hyper_parameters'
 def create_directory(size):
-	os.mkdir(PATH + "/" + str(size))
+        if(os.path.exists(PATH + "/" + str(size))):
+                return
+        # Make sure the directory doesn't already exist.
+        os.mkdir(PATH + "/" + str(size))
 
-# Max run for batch sizes 
-size_list = [2 ** x for x in range(5,11)]
-for size in size_list: 
-    create_directory(size)
-    print("Entering batch size", size)
-    for run in range(0,50+1):
-        print("Entering test",run, "for size", "size")
-        file_path = PATH + "/" + str(size) + "/" + str(run)
-            
-        params_to_update = {
-            # LSTM related
-            'which_rnn': 'LSTM', # either 'LSTM' or 'GRU'
-            'lstm_size': 100,
-            'dropout': 0.25, # (0.25, 0.25), # tuple dropout is for recurrent dropout and cannot work with GPU computation.
+# parameters 'use_cnn', 'cnn_filter_size', and 'cnn_filter_length' don't do anything yet. CNN development is WIP.
 
-            # CNN related
-            'use_cnn': True,
-            'cnn_layers': 2,
-            'cnn_num_filters': 40,
-            'cnn_filter_size': 3,
-            'cnn_max_pool_size': 2, # if None or False, do not use MaxPooling
 
-            # CRF related
-            'classifier': 'crf', # either 'softmax', 'kc-crf' (from keras-contrib) or 'crf' (by Philipp Gross).
-            'crf_activation': 'linear', # Only for kc-crf. Possible values: 'linear' (default), 'relu', 'tanh', 'softmax', others. See Keras Activations.
+# Max run for batch sizes
+# Organized by name, cnn layers, cnn number filters, cnn filter size, cnn max pool size, dropout*
+run0 = [2,40,3,2,0.25]
+run1 = ['1-test-layer',6,40,3,2,0.25]
+run2 = ['2-test-filter', 2,100,3,2,0.25]
+run3 = ['3-test-layer-filter', 6,100,3,2,0.25]
+run4 = ['4-test-filter-size', 2,40,2,2,0.25]
+run_lst = [run1,run2,run3,run4]
+for run in run_lst:
+        create_directory(run[0])
+        print("Entering run: ", run[0])
 
-            # general params
-            'mini_batch_size': size,
-            'using_gpu': True,
-            'embedding_size': 100,
-            'early_stopping': 10
-        }
+        for iteration in range(0,21): # Run one extra test for an outlier to be removed.
+                file_path = PATH + "/" + str(run[0]) + "/" + str(iteration) + '.csv'
+                print(run[1],run[2],run[3],run[4])
+                params_to_update = {
+    # LSTM related
+    'which_rnn': 'LSTM', # either 'LSTM' or 'GRU'
+    'lstm_size': 100,
+    'dropout': 0.25, # (0.25, 0.25), # tuple dropout is for recurrent dropout and cannot work with GPU computation.
+    # CNN related
+    'use_cnn': True,
+    'cnn_layers': run[1],
+    'cnn_num_filters': run[2],
+    'cnn_filter_size': run[3],
+    'cnn_max_pool_size': run[4], # if None or False, do not use MaxPooling
 
-        model = BiLSTM(params_to_update)
-        model.set_vocab_size(vocab_size, n_class_labels, word_length, mappings)
-        model.set_dataset(datasets, data)
-        model.store_results(file_path) # Path to store performance scores for dev / test
-        model.model_save_path = "models/[ModelName]_[DevScore]_[TestScore]_[Epoch].h5" # Path to store models
-        model.fit(epochs = 120)
+    # CRF related
+    'classifier': 'crf', # either 'softmax', 'kc-crf' (from keras-contrib) or 'crf' (by Philipp Gross).
+    'crf_activation': 'linear', # Only for kc-crf. Possible values: 'linear' (default), 'relu', 'tanh', 'softmax', others. See Keras Activations.
+
+    # general params
+    'mini_batch_size': 64,
+    'using_gpu': True,
+    'embedding_size': 100,
+    'early_stopping': 10
+                }
+
+                model = BiLSTM(params_to_update)
+                model.set_vocab_size(vocab_size, n_class_labels, word_length, mappings)
+                model.set_dataset(datasets, data)
+                model.store_results(file_path) # Path to store performance scores for dev / test
+                model.model_save_path = "models/[ModelName]_[DevScore]_[TestScore]_[Epoch].h5" # Path to store models
+                model.fit(epochs = 120)
+                os.system("rm /home/ubuntu/gulp/lstm-syllabify/models/* -rf")
