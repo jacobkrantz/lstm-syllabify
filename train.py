@@ -80,12 +80,24 @@ def create_directory(size):
 
 # Max run for batch sizes
 # Organized by name, cnn layers, cnn number filters, cnn filter size, cnn max pool size, dropout*
-run0 = [2,40,3,2,0.25]
-run1 = ['1-test-layer',6,40,3,2,0.25]
-run2 = ['2-test-filter', 2,100,3,2,0.25]
-run3 = ['3-test-layer-filter', 6,100,3,2,0.25]
-run4 = ['4-test-filter-size', 2,40,2,2,0.25]
-run_lst = [run1,run2,run3,run4]
+# run0 = [2,40,3,2,0.25]
+# run1 = ['1-test-layer',6,40,3,2,0.25]
+# run2 = ['2-test-filter', 2,100,3,2,0.25]
+# run3 = ['3-test-layer-filter', 6,100,3,2,0.25]
+# run4 = ['4-test-filter-size', 2,40,2,2,0.25]
+
+run_lst = [
+    [ '9', 2, 100, 2,    4, 0.25],
+    ['10', 2, 200, 3,    2, 0.25],
+    ['11', 2, 200, 2,    2, 0.25],
+    ['12', 1,  40, 3,    2, 0.25],
+    ['13', 1, 100, 3,    2, 0.25],
+    ['14', 1, 200, 3,    2, 0.25],
+    ['15', 2, 200, 2,    4, 0.25],
+    ['16', 2, 100, 2, None, 0.25],
+    ['17', 2, 200, 2, None, 0.25],
+    ['18', 2, 100, 3, None, 0.25]
+]
 for run in run_lst:
         create_directory(run[0])
         print("Entering run: ", run[0])
@@ -111,7 +123,7 @@ for run in run_lst:
 
     # general params
     'mini_batch_size': 64,
-    'using_gpu': True,
+    'using_gpu': False,
     'embedding_size': 100,
     'early_stopping': 10
                 }
