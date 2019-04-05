@@ -8,7 +8,7 @@ import random
 import logging
 
 import keras
-from keras.optimizers import *
+from keras.optimizers import Adam, Nadam, RMSprop, Adadelta, Adagrad, SGD
 from keras.models import Model
 from keras.layers import *
 from .keraslayers.ChainCRF import ChainCRF
@@ -199,20 +199,21 @@ class BiLSTM:
                     lossFct = crf.sparse_loss
                 
                 elif classifier == 'kc-crf': # use keras-contrib CRF
-                    output = TimeDistributed(Dense(
-                            units = self.n_class_labels,
-                            activation = None
-                        ), name = model_name + '_hidden_lin_layer'
-                    )(output)
+                    raise ValueError('kc-crf is not being used any more. See past versions if necessary.')
+                    # output = TimeDistributed(Dense(
+                    #         units = self.n_class_labels,
+                    #         activation = None
+                    #     ), name = model_name + '_hidden_lin_layer'
+                    # )(output)
 
-                    crf = CRF(
-                        units = self.n_class_labels,
-                        learn_mode = 'join',
-                        activation = self.params['crf_activation'],
-                        sparse_target = True
-                    )
-                    output = crf(output)
-                    lossFct = crf_loss
+                    # crf = CRF(
+                    #     units = self.n_class_labels,
+                    #     learn_mode = 'join',
+                    #     activation = self.params['crf_activation'],
+                    #     sparse_target = True
+                    # )
+                    # output = crf(output)
+                    # lossFct = crf_loss
                     
                 else:
                     assert(False) # bad classifier option
