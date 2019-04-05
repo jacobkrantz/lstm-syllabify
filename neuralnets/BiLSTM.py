@@ -171,8 +171,7 @@ class BiLSTM:
                         name = 'max_pooling_' + str(i+1)
                     )(cnn_layer)
 
-        # concatenating the CNN with the LSTM essentially tacks on the cnn vector to the end of each lstm time-step vector.
-        if(self.params['use_cnn'] and self.params['cnn_layers'] > 0):
+            # concatenating the CNN with the LSTM essentially tacks on the cnn vector to the end of each lstm time-step vector.
             concat_layer = concatenate([recurrent_layer, cnn_layer])
         else:
             concat_layer = recurrent_layer

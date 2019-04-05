@@ -123,7 +123,7 @@ for run in run_lst:
 
     # general params
     'mini_batch_size': 64,
-    'using_gpu': False,
+    'using_gpu': True,
     'embedding_size': 100,
     'early_stopping': 10
                 }
