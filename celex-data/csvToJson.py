@@ -15,10 +15,10 @@ def get_file(filename):
                 "syllabification": "%s",
                 "word": "%s"
 
-        },""" % (phone,phoneSyl,word)
+        },""" % (phone, phoneSyl, word)
         json_object += json_row
         if(index % 1000 == 0):
-            print index
+            print(index)
     json_object += '\n]'
 
     return json_object
