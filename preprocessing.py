@@ -1,12 +1,16 @@
 from copy import copy
 import logging
+from numpy import array
+from numpy import asarray
+from numpy import zeros
+
 """
 potential problem: running an old model may fail due to mappings
     being regenerated every time.
     TODO: fix mappings to a specified map by storing them in pkl file.
 """
 
-def load_dataset(datasets, do_pad_words):
+def load_dataset(datasets, do_pad_words, embedding_size=None):
     """
     if pad_words, then each word in every dataset will be padded to the length of the longest word. PAD token is integer 0.
     All fields would be padded, which include 'tokens', 'raw_tokens', and 'boundaries'. This makes the training take 75s per epoch on just LSTM (~2x longer).
@@ -30,8 +34,7 @@ def load_dataset(datasets, do_pad_words):
         if do_pad_words:
             data[datasetName], word_length = pad_words(data[datasetName])
 
-    # currently do not have pre-trained phonetic embeddings. 
-    # returning embeddings = []. Embeddings mst be trained.
+    embeddings = load_embeddings(embedding_size, mappings, vocab_size, datasetName)
     return (embeddings, data, mappings, vocab_size, n_class_labels, word_length)
 
 def pad_words(data):
@@ -127,8 +130,6 @@ def process_data(paths, dataset_columns, dataset, mappings):
 
     return data
 
-
-
 def read_conll_single(f_name):
     words = []
     with open(f_name, 'r') as f:
@@ -144,14 +145,44 @@ def read_conll_single(f_name):
 
     return words
 
-def create_data_matrix(words, mappings):
-    # TODO: this should be merged with process_data
-    data = []
-    for word in words:
-        data.append({
-            'raw_tokens' : word['tokens'],
-            'tokens' : [mappings[raw] for raw in word['tokens']]
-        })
-    
-    return data
-    
+def load_embeddings(embedding_size, mappings, vocab_size, datasetName):
+    """
+    GloVe.
+    How to use with Keras: https://machinelearningmastery.com/use-word-embedding-layers-deep-learning-keras/
+    """
+    if(embedding_size == None):
+        return []
+    elif(embedding_size == 50):
+        f_name = 'glove-50d-vectors.txt'
+    elif(embedding_size == 100):
+        f_name = 'glove-100d-vectors.txt'
+    elif(embedding_size == 200):
+        f_name = 'glove-200d-vectors.txt'
+    else:
+        raise ValueError('pretrained GloVe embeddings must be either 50, 100 or 200 dimensional.')
+
+    # which language's embeddings
+    if datasetName == 'english':
+        location = './embeddings/optimized_disc/'
+    else:
+        raise ValueError('pretrained GloVe embeddings only exist for english right now.')
+
+    embeddings_index = {}
+    with open(location + f_name, 'r') as f:
+        for line in f:
+            line = line.split()
+            phone = line[0]
+            coefs = asarray(line[1:], dtype='float32')
+            embeddings_index[phone] = coefs
+        
+        print('Loaded %s phone vectors.' % len(embeddings_index))
+
+    # add PAD token (0) to embeddings
+    embeddings_index['0'] = zeros(embedding_size)
+
+    # generate the final embedding matrix indexed by the token value.
+    embedding_matrix = zeros((vocab_size, embedding_size))
+    for phone, index in mappings.items():
+        embedding_vector = embeddings_index.get(phone)
+        embedding_matrix[index] = embedding_vector
+    return embedding_matrix

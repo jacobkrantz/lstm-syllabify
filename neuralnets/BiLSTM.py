@@ -49,6 +49,7 @@ class BiLSTM:
             'early_stopping': 5,
             'mini_batch_size': 32,
             'feature_names': ['tokens'],
+            'use_pretrained_embeddings': False, # if True, use GloVe phone embeddings
             'embedding_size': 50,
             'crf_activation':'linear',
             'using_gpu': True
@@ -90,7 +91,9 @@ class BiLSTM:
 
         self.main_model_name = self.model_names[0]
 
-        
+    def set_embeddings(self, embeddings):
+        self.embeddings_matrix = embeddings
+
     def build_model(self):
         self.models = {}
 
@@ -103,12 +106,21 @@ class BiLSTM:
             name = 'phones_input'
         )
 
-        tokens = Embedding(
-            input_dim = self.vocab_size,
-            output_dim = self.params['embedding_size'],
-            trainable = True,
-            name = 'phone_embeddings'
-        )(tokens_input) # output shape: (batch_size, word_length, embedding size)
+        if(self.params['use_pretrained_embeddings']):
+            tokens = Embedding(
+                input_dim = self.vocab_size,
+                output_dim = self.params['embedding_size'],
+                weights=[self.embeddings_matrix],
+                trainable = False,
+                name = 'phone_embeddings'
+            )(tokens_input) # output shape: (batch_size, word_length, embedding size)
+        else:
+            tokens = Embedding(
+                input_dim = self.vocab_size,
+                output_dim = self.params['embedding_size'],
+                trainable = True,
+                name = 'phone_embeddings'
+            )(tokens_input) # output shape: (batch_size, word_length, embedding size)
 
         # Add recurrent layers
         if(self.params['which_rnn'] == 'GRU'):
@@ -255,10 +267,10 @@ class BiLSTM:
                 K.set_value(self.models[model_name].optimizer.lr, self.learning_rate_updates[self.params['optimizer']][self.epoch]) 
 
         for batch in self.minibatch_iterate_dataset():
-            for model_name in self.model_names:         
+            for model_name in self.model_names:
                 nn_labels = batch[model_name][0]
                 nn_input = batch[model_name][1:]
-                self.models[model_name].train_on_batch(nn_input, nn_labels)  
+                print(self.models[model_name].train_on_batch(nn_input, nn_labels))
 
 
     def minibatch_iterate_dataset(self, model_names = None):
