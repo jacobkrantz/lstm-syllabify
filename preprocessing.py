@@ -10,6 +10,39 @@ def load_dataset(datasets, do_pad_words):
     """
     if pad_words, then each word in every dataset will be padded to the length of the longest word. PAD token is integer 0.
     All fields would be padded, which include 'tokens', 'raw_tokens', and 'boundaries'. This makes the training take 75s per epoch on just LSTM (~2x longer).
+
+    Returns:
+        EMBEDDINGS (not used)
+            - numpy.ndarray holding 300 dimensional embeddings (each numpy.ndarray) that are not normalized to 0-1.
+            - there is not an explicit mapping built into the structure, so they must be associated with the mappings data structure
+            - embeddings are for the word inputs. word (raw_tokens) -> tokens -> embedding
+        DATA
+            - raw_tokens are phones in DISC format
+            shape:
+            data = {
+                'english': {
+                    'train_matrix': [
+                        {
+                            'tokens': [int, int, ... , int],
+                            'boundaries': [int, int, ... , int],
+                            'raw_tokens':[str, str, ..., str]
+                        }, ...
+                    ]
+                    'dev_matrix': same as train_matrix
+                    'test_matrix': same as train_matrix
+                }
+            }
+
+        MAPPINGS
+            - dictionary that maps tokens to a unique integer
+        VOCAB_SIZE
+            - number of possible inputs to the NN.
+            - Usually is the number of phones in the langage being used.
+        N_CLASS_LABELS
+            - number of possible types of syllable boundaries. 
+            - Default is two: either boundary (1) or no boundary (0)
+        WORD_LENGTH
+            - length of the longest word in the dataset
     """
     embeddings = []
     mappings = {}
