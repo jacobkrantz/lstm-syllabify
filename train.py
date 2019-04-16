@@ -63,14 +63,17 @@ cnn_optimization_runs = [
 m_experiment_runs = [
     # [name, use_cnn, use_lstm, cnn layers, cnn number filters, cnn filter size, cnn max pool size, lstm size, embedding size, mini_batch_size, which_rnn, classifier, language]
     # ['Base', True,   True, 2, 200, 3,    2, 300, 300, 64, 'LSTM',     'crf', 'english'], # same as cnn_optimization_runs #26.
-    [  'M1', True,   True, 2, 200, 3,    2, 300, 300, 64,  'GRU',     'crf', 'english'],
-    [  'M2', False,  True, 2, 200, 3,    2, 300, 300, 64, 'LSTM',     'crf', 'english'],
-    [  'M3', False,  True, 2, 200, 3,    2, 300, 300, 64,  'GRU',     'crf', 'english'],
-    [  'M4', True,   True, 2, 200, 3,    2, 300, 300, 64, 'LSTM', 'softmax', 'english'],
-    [  'M5', True,  False, 2, 200, 3,    2, 300, 300, 64, 'LSTM',     'crf', 'english'],
-    [  'M6', True,   True, 2, 200, 3,    2, 300, 300, 64, 'LSTM',     'crf', 'italian'],
-    [  'M7', True,   True, 2, 200, 3,    2, 300, 300, 64, 'LSTM',     'crf',  'basque'],
-    [  'M8', True,   False, 2, 200, 3,    2, 300, 300, 64, 'LSTM',     'crf', 'NETtalk']
+    [  'M1', True,   True, 2, 200, 3, 2, 300, 300, 64,  'GRU',     'crf',      'english' ],
+    [  'M2', False,  True, 2, 200, 3, 2, 300, 300, 64, 'LSTM',     'crf',      'english' ],
+    [  'M3', False,  True, 2, 200, 3, 2, 300, 300, 64,  'GRU',     'crf',      'english' ],
+    [  'M4', True,   True, 2, 200, 3, 2, 300, 300, 64, 'LSTM', 'softmax',      'english' ],
+    [  'M5', True,  False, 2, 200, 3, 2, 300, 300, 64, 'LSTM',     'crf',      'english' ],
+    [  'M6', True,   True, 2, 200, 3, 2, 300, 300, 64, 'LSTM',     'crf',      'italian' ],
+    [  'M7', True,   True, 2, 200, 3, 2, 300, 300, 64, 'LSTM',     'crf',       'basque' ],
+    [  'M8', True,  False, 2, 200, 3, 2, 300, 300, 64, 'LSTM',     'crf',      'NETtalk' ],
+    [  'M9', True,  False, 2, 200, 3, 2, 300, 300, 16, 'LSTM',     'crf',      'NETtalk' ],
+    [ 'M10', True,  False, 2, 200, 3, 2, 300, 300, 64, 'LSTM',     'crf', 'NETtalkTrain' ],
+    [ 'M11', True,  False, 2, 200, 3, 2, 300, 300, 16, 'LSTM',     'crf', 'NETtalkTrain' ]
 ]
 
 # ---------------------------
