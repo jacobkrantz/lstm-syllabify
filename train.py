@@ -62,7 +62,7 @@ cnn_optimization_runs = [
 
 m_experiment_runs = [
     # [name, use_cnn, use_lstm, cnn layers, cnn number filters, cnn filter size, cnn max pool size, lstm size, embedding size, mini_batch_size, which_rnn, classifier, language]
-    # ['Base', True,   True, 2, 200, 3,    2, 300, 300, 64, 'LSTM',     'crf', 'english'], # same as cnn_optimization_runs #26.
+    # ['Base', True, True, 2, 200, 3, 2, 300, 300, 64, 'LSTM',     'crf',       'english'], # same as cnn_optimization_runs #26.
     [  'M1', True,   True, 2, 200, 3, 2, 300, 300, 64,  'GRU',     'crf',      'english' ],
     [  'M2', False,  True, 2, 200, 3, 2, 300, 300, 64, 'LSTM',     'crf',      'english' ],
     [  'M3', False,  True, 2, 200, 3, 2, 300, 300, 64,  'GRU',     'crf',      'english' ],
@@ -73,8 +73,13 @@ m_experiment_runs = [
     [  'M8', True,  False, 2, 200, 3, 2, 300, 300, 64, 'LSTM',     'crf',      'NETtalk' ],
     [  'M9', True,  False, 2, 200, 3, 2, 300, 300, 16, 'LSTM',     'crf',      'NETtalk' ],
     [ 'M10', True,  False, 2, 200, 3, 2, 300, 300, 64, 'LSTM',     'crf', 'NETtalkTrain' ],
-    [ 'M11', True,  False, 2, 200, 3, 2, 300, 300, 16, 'LSTM',     'crf', 'NETtalkTrain' ]
+    [ 'M11', True,  False, 2, 200, 3, 2, 300, 300, 16, 'LSTM',     'crf', 'NETtalkTrain' ],
+    [ 'M12', True,  False, 2, 200, 3, 2, 300, 300, 32, 'LSTM',     'crf', 'NETtalkTrain' ],
+    [ 'M13', True,  False, 2, 200, 3, 2, 300, 300, 64, 'LSTM',     'crf',        'dutch' ]
 ]
+
+# just do the last for now
+m_experiment_runs = [m_experiment_runs[-1]]
 
 # ---------------------------
 #  Load data and train model
@@ -117,7 +122,7 @@ for run in m_experiment_runs:
 
             # general params
             'mini_batch_size': run[9],
-            'using_gpu': False,
+            'using_gpu': True,
             'embedding_size': run[8]
         }
 

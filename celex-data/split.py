@@ -44,15 +44,16 @@ def split(file_name, train_percent, test_percent, dev_percent):
     # save each subset to their respective file
     for ds in [(train,'train.txt'), (test, 'test.txt'), (dev,'dev.txt')]:
         with open(ds[1], 'w') as f:
+            syl_column_name = 'PhonSylDISC' # 'syllabification'
             for entry in ds[0]:
-                for i,phone in enumerate(entry['syllabification']):
+                for i,phone in enumerate(entry[syl_column_name]):
                     if(phone == '-'):
                         continue
 
                     # second column: 1 if there is a syllable boundary after the phone, else 0
-                    if(i+1 == len(entry['syllabification'])):
+                    if(i+1 == len(entry[syl_column_name])):
                         has_boundary = '0'
-                    elif(entry['syllabification'][i+1] == '-'):
+                    elif(entry[syl_column_name][i+1] == '-'):
                         has_boundary = '1'
                     else:
                         has_boundary = '0'
