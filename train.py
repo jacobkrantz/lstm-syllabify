@@ -75,7 +75,8 @@ m_experiment_runs = [
     [ 'M10', True,  False, 2, 200, 3, 2, 300, 300, 64, 'LSTM',     'crf', 'NETtalkTrain' ],
     [ 'M11', True,  False, 2, 200, 3, 2, 300, 300, 16, 'LSTM',     'crf', 'NETtalkTrain' ],
     [ 'M12', True,  False, 2, 200, 3, 2, 300, 300, 32, 'LSTM',     'crf', 'NETtalkTrain' ],
-    [ 'M13', True,  False, 2, 200, 3, 2, 300, 300, 64, 'LSTM',     'crf',        'dutch' ]
+    [ 'M13', True,  False, 2, 200, 3, 2, 300, 300, 64, 'LSTM',     'crf',        'dutch' ],
+    [ 'M14', True,   True, 2, 200, 3, 2, 300, 300, 64, 'LSTM',     'crf',     'manipuri' ]
 ]
 
 # just do the last for now
@@ -122,7 +123,7 @@ for run in m_experiment_runs:
 
             # general params
             'mini_batch_size': run[9],
-            'using_gpu': True,
+            'using_gpu': False,
             'embedding_size': run[8]
         }
 
