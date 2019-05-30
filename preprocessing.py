@@ -162,29 +162,38 @@ def process_data(paths, dataset_columns, dataset, mappings):
 
 
 
-def read_conll_single(f_name):
+def read_conll_single(f_name, final_length = 28):
+    # The length is hardcoded for English. Won't work with other languages...
     words = []
+    current_length = 0
     with open(f_name, 'r') as f:
         word = []
         for line in f:
             line = line.split()
             if len(line) == 0:
+                word += ['PAD' for x in range(final_length - current_length)]
                 words.append({ 'tokens' : copy(word) })
                 word = []
+                current_length = 0
                 continue
-            
+            current_length +=1 
             word.append(line[0])
-
     return words
 
 def create_data_matrix(words, mappings):
     # TODO: this should be merged with process_data
     data = []
     for word in words:
+        token_transform_lst = []
+        for char in word['tokens']:
+            if(char in mappings):
+                token_transform_lst.append(mappings[char])
+            else:
+                token_transform_lst.append('0')
         data.append({
             'raw_tokens' : word['tokens'],
-            'tokens' : [mappings[raw] for raw in word['tokens']]
+            'tokens' : token_transform_lst
         })
-    
+     
     return data
     

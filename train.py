@@ -60,10 +60,8 @@ def train_and_eval_model(run_params, iterations=21):
                 'label': 'boundaries'                         # Which column we like to predict
             }
     }
-
     # Load the embeddings and the dataset. Choose whether or not to pad the words.
     embeddings, data, mappings, vocab_size, n_class_labels, word_length = load_dataset(datasets, do_pad_words=True)
-
     create_directory(run_params[0])
     print("Entering run: ", run_params[0])
 
@@ -98,14 +96,14 @@ def train_and_eval_model(run_params, iterations=21):
         model.store_results(file_path) # Path to store performance scores for dev / test
         model.model_save_path = "models/[ModelName]_[DevScore]_[TestScore]_[Epoch].h5" # Path to store models
         model.fit(epochs = 120)
-        os.system("rm /home/ubuntu/gulp/lstm-syllabify/models/* -rf")
+        #os.system("rm /home/ubuntu/gulp/lstm-syllabify/models/* -rf")
 
 final_params_large = ['Base', True, True, 2, 200, 3, 2, 300, 300, 64, 'LSTM', 'crf', 'english']
 small_test_params = [
-    ['small-1', True, True, 1, 40, 3, 2, 100, 100, 64, 'LSTM', 'crf', 'english'], # small-1 is equivalent to cnn_optimization_runs #12
+    # ['small-1', True, True, 1, 40, 3, 2, 100, 100, 64, 'LSTM', 'crf', 'english'], # small-1 is equivalent to cnn_optimization_runs #12
     ['small-2', True, True, 1, 40, 3, 2, 100,  50, 64, 'LSTM', 'crf', 'english'],
-    ['small-3', True, True, 1, 40, 3, 2,  50, 100, 64, 'LSTM', 'crf', 'english'],
-    ['small-4', True, True, 1, 40, 3, 2,  50,  50, 64, 'LSTM', 'crf', 'english'],
+    # ['small-3', True, True, 1, 40, 3, 2,  50, 100, 64, 'LSTM', 'crf', 'english'],
+    # ['small-4', True, True, 1, 40, 3, 2,  50,  50, 64, 'LSTM', 'crf', 'english'],
 ]
 
 dataset_names = [
@@ -118,8 +116,4 @@ dataset_names = [
     'french'
 ]
 
-for small_test_param in small_test_params:
-    for dataset_name in dataset_names:
-        small_test_param[-1] = dataset_name
-        print(small_test_param)
-        train_and_eval_model(small_test_param)
+train_and_eval_model(final_params_large,1)
