@@ -66,7 +66,7 @@ def train_and_eval_model(run_params, iterations=21):
 
     create_directory(run_params[0])
     print("Entering run: ", run_params[0])
-    return
+
     for iteration in range(0,iterations):
         file_path = PATH + "/" + str(run_params[0]) + "/" + str(iteration) + '.csv'
         print("Run with updated parameters: ", run_params)
