@@ -46,3 +46,10 @@ m_experiment_runs = [
     [ 'M13', True,  False, 2, 200, 3, 2, 300, 300, 64, 'LSTM',     'crf',        'dutch' ],
     [ 'M14', True,   True, 2, 200, 3, 2, 300, 300, 64, 'LSTM',     'crf',     'manipuri' ]
 ]
+
+small_test_params = [
+    ['small-1', True, True, 1, 40, 3, 2, 100, 100, 64, 'LSTM', 'crf', 'english'], # small-1 is equivalent to cnn_optimization_runs #12
+    ['small-2', True, True, 1, 40, 3, 2, 100,  50, 64, 'LSTM', 'crf', 'english'],
+    ['small-3', True, True, 1, 40, 3, 2,  50, 100, 64, 'LSTM', 'crf', 'english'],
+    ['small-4', True, True, 1, 40, 3, 2,  50,  50, 64, 'LSTM', 'crf', 'english'],
+]

@@ -23,7 +23,7 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 # Results directories
-PATH = os.getcwd() + '/results/small_experiments'
+PATH = os.getcwd() + '/results/'
 def create_directory(name):
     if(not os.path.exists(PATH)):
         os.mkdir(PATH)
@@ -66,7 +66,7 @@ def train_and_eval_model(run_params, iterations=21):
 
     create_directory(run_params[0])
     print("Entering run: ", run_params[0])
-
+    return
     for iteration in range(0,iterations):
         file_path = PATH + "/" + str(run_params[0]) + "/" + str(iteration) + '.csv'
         print("Run with updated parameters: ", run_params)
@@ -101,25 +101,22 @@ def train_and_eval_model(run_params, iterations=21):
         os.system("rm /home/ubuntu/gulp/lstm-syllabify/models/* -rf")
 
 final_params_large = ['Base', True, True, 2, 200, 3, 2, 300, 300, 64, 'LSTM', 'crf', 'english']
-small_test_params = [
-    ['small-1', True, True, 1, 40, 3, 2, 100, 100, 64, 'LSTM', 'crf', 'english'], # small-1 is equivalent to cnn_optimization_runs #12
-    ['small-2', True, True, 1, 40, 3, 2, 100,  50, 64, 'LSTM', 'crf', 'english'],
-    ['small-3', True, True, 1, 40, 3, 2,  50, 100, 64, 'LSTM', 'crf', 'english'],
-    ['small-4', True, True, 1, 40, 3, 2,  50,  50, 64, 'LSTM', 'crf', 'english'],
-]
+final_params_small = ['small-3', True, True, 1, 40, 3, 2,  50, 100, 64, 'LSTM', 'crf', 'english'] # eqivalent to small-3
 
 dataset_names = [
     'english',
     'italian',
     'basque',
     'NETtalkTrain',
-    'dutch',
+    'largeDutch',
     'manipuri',
     'french'
 ]
 
-for small_test_param in small_test_params:
-    for dataset_name in dataset_names:
-        small_test_param[-1] = dataset_name
-        print(small_test_param)
-        train_and_eval_model(small_test_param)
+final_params_large[0] = 'largeDutchLargeModel'
+final_params_large[-1] = 'largeDutch'
+train_and_eval_model(final_params_large)
+
+final_params_small[0] = 'largeDutchSmallModel'
+final_params_small[-1] = 'largeDutch'
+train_and_eval_model(final_params_small)
