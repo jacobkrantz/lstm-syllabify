@@ -113,10 +113,8 @@ dataset_names = [
     'french'
 ]
 
-final_params_large[0] = 'largeDutchLargeModel'
-final_params_large[-1] = 'largeDutch'
-train_and_eval_model(final_params_large)
-
-final_params_small[0] = 'largeDutchSmallModel'
-final_params_small[-1] = 'largeDutch'
-train_and_eval_model(final_params_small)
+for dataset in dataset_names:
+    final_params_large[-1] = dataset
+    final_params_large[0] = 'softmax-' + dataset
+    final_params_large[11] = 'softmax'
+    train_and_eval_model(final_params_large)
