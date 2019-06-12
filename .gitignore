@@ -106,8 +106,13 @@ venv.bak/
 .h5
 .vscode
 models/
+
+# results folders
 results/*.csv
 hyper_parameters
 batch_and_variation
 cnn_optimization
 m_experiments
+largeDutch
+small_experiments
+softmax
