@@ -1,0 +1,341 @@
+NAME: NetTalk Corpus
+
+SUMMARY: This is an updated and corrected version of the data set used by
+Sejnowski and Rosenberg in their influential study of speech generation
+using a neural network [1].  The file "nettalk.data" contains a list of
+20,008 English words, along with a phonetic transcription for each word.
+The task is to train a network to produce the proper phonemes, given a
+string of letters as input.  This is an example of an input/output mapping
+task that exhibits strong global regularities, but also a large number of
+more specialized rules and exceptional cases.
+
+SOURCE: The data set was contributed to the benchmark collection by Terry
+Sejnowski, now at the Salk Institute and the University of California at
+San Deigo.  The data set was developed in collaboration with Charles
+Rosenberg of Princeton.  Approximately 250 person-hours went into creating
+and testing this database.
+
+COPYRIGHT STATUS: The data file carries the following copyright notice:
+
+Copyright (C) 1988 by Terrence J. Sejnowski.  Permission is hereby given to
+use the included data for non-commercial research purposes.  Contact The
+Johns Hopkins University, Cognitive Science Center, Baltimore MD, USA for
+information on commercial use.
+
+MAINTAINER: Scott E. Fahlman
+
+PROBLEM DESCRIPTION:
+
+The data set is in the benchmark directory in file "nettalk.data".  A
+description of the format used for the phonetic transcription is included
+at the end of this file.
+
+METHODOLOGY: 
+
+This data set can be used in a number of different ways to test learning
+speed, quality of ultimate learning, ability to generalize, or combinations
+of these factors.
+
+Sejnowski and Rosenberg used the following experimental setup:
+
+The input to the network is a series of seven consecutive letters from one
+of the training words.  The central letter in this sequence is the
+"current" one for which the phonemic output is to be produced.  Three
+letters on either side of this central letter provide context that helps to
+determine the pronunciation.  Of course, there are a few words in English
+for which this local seven-letter window is not sufficient to determine the
+proper output.  For the study using this "dictionary" corpus, individual
+words are moved through the window so that each letter in the word is seen
+in the central position.  Blanks are added before and after the word as
+needed.  Some words appear more than once in the dictionary, with different
+pronunciations in each case; only the first pronunciation given for each
+word was used in this experiment.
+
+A unary encoding is used.  For each of the seven letter positions in the
+input, the network has a set of 29 input units: one for each of the 26
+letters in English, and three for punctuation characters.  Thus, there are
+29 x 7 = 203 input units in all.
+
+The output side of the network uses a distributed representation for the
+phonemes.  There are 21 output units representing various articulatory
+features such as voicing and vowel height.  Each phoneme is represented by
+a distinct binary vector over this set of 21 units.  In addition, there are
+5 output units that encode stress and syllable boundaries.
+
+Standard back-propagation was used, with update of the weights after the
+error gradient has been computed by back-propagation of errors for all the
+letter positions a single word.  The number of hidden units in the network
+was varied from one experiment to another, from 0 to 120.  Each layer was
+totally connected to the next; in the case of 0 hidden units, the input
+units were directly connected to the outputs.
+
+The weight-update formulas used in the Sejnowski and Rosenberg study were
+slightly different from the standard form; see the paper for a description
+of the momentum and learning rate parameters used.  The network weights
+were initialized with random values in the range -0.3 to +0.3.  A
+sum-of-squares error measure was used, with errors of magnitude less than
+0.1 being treated as 0.0.
+
+RESULTS: 
+
+In [1], Sejnowski and Rosenberg present full error curves for a number of
+experiments using this corpus.  Here we will present only a brief summary
+of these results.  The results reported here all use the "best guess"
+criterion: an output is treated as correct if it is closer (smallest angle)
+to the correct output vector than to any other phoneme output vector.
+
+A subset, consisting of the 1000 most common English words, was tested with
+0, 15, 30, 60, and 120 hidden units.  With 0 hidden units, the best
+performance achieved was about 82% correct by the "best guess" criterion.
+The rate of learning and final performance improved steadily with
+increasing numbers of hidden units, up to 98% correct with 120 hidden
+units.
+
+(The original "list of 1000 most common English words" is not available,
+but a reconstruction of this list is in file "nettalk.list" in the
+benchmark data base.  This should be very close to the original.)
+
+This 120-hidden-unit network scored about 80% after training on 5000
+word-presentations (i.e. five times through the 1000-word corpus), and the
+98% level was reached after 30,000 presentations.
+
+This pre-trained network with 120 hidden units was then tried on the full
+corpus of 20,000 words.  Without further training, the correct output was
+generated in 77% of the cases.  After 5 passes through the larger corpus,
+performance improved to 90% correct.
+
+Sejnowski reports that in later (unpublished) experiments, a better rate of
+generalization was achieved.  A window of 11 consecutive letters was used
+instead of the 7 used in other experiments.  The network was trained on
+18,000 words from the corpus until about 94% of the output phonemes were
+correct by the best-guess criterion.  The remaining 2,000 words were then
+presented without further training, and 92% of the output phonemes were
+correct.
+
+REFERENCES: 
+
+1. Sejnowski, T.J., and Rosenberg, C.R. (1987).  "Parallel networks that
+learn to pronounce English text" in Complex Systems, 1, 145-168.
+
+***************************************************************************
+
+DESCRIPTION OF DATA FORMAT:
+
+The pronouncing dictionary was created to study the translation process
+between written English, using graphemes or letters as units, and spoken
+English, using phonemes as units. The dictionary includes 20008 aligned
+letter and phonetic representations with stresses.
+
+The dictionary contains four tab separated fields of information for each
+word.  The fields are:
+
+	1) a letter representation
+	2) a phonemic representation
+	3) stress and syllabic structure
+	4) an integer indicating foreign and irregular words
+
+**** Phonemic Codes ****
+
+The phonemic coding scheme uses 50 phonemes. They are compatible with the
+DECtalk speech synthesizer which uses a modified ARPAbet system.
+
+NETalk		Example words 
+phoneme		that use the phoneme
+symbol
+
+  a		wad,dot,odd
+  b		bad
+  c		o in "or", au in "caught", aw in "awe"
+  d		add
+  e		angel,blade,way
+  f		farm
+  g	  	gap
+  h		hot,who
+  i		long e as in "eve", theme,bee
+  k	 	cab,keep
+  l		lad
+  m		man,imp
+  n		gnat,and
+  o		only,own
+  p		pad,apt
+  r		rap
+  s		cent,ask
+  t		tab
+  u		boot,ooze,you
+  v		vat
+  w		we,liquid
+  x		a in "pirate", o in "welcome"
+  y		yes,senior
+  z		zoo,goes
+  A		long i as in "ice", height,eye
+  C		chart,cello
+  D		the,mother
+  E		many,end,head
+  G		length,long,bank
+  I		i in "give", u in "busy", ai in "captain"
+  J		jam,gem
+  K		anxious,sexual
+  L		evil,able
+  M		chasm
+  N		shorten,basin
+  O		oil,boy
+  Q		quilt
+  R		honer,after,satyr
+  S		ocean,wish
+  T		thaw,bath
+  U		wood,could,put
+  W		out,towel,house
+  X		mixture,annex
+  Y		use,feud,new
+  Z		s in "usual", s in "vision "
+  @		cab,plaid
+  !		z in "nazi", zz in "pizza"
+  #		x in "auxiliary", x in "exist"
+  *		wh in "what"
+  ^		u in "up", o in "son", oo in "blood"
+  +             oi in "abattoir", oi in "mademoiselle"
+
+**** Stress and Syllables *****
+
+Stress and syllable information is coded in the following manner.  Each
+phoneme position is coded with one of the following symbols.
+
+	'>'	indicates a consonant prior to a syllable nucleus.
+	'<'	indicates a consonant or vowel following the first
+		vowel of the syllable nucleus.
+	'0'	indicates the first vowel in the nucleus of an unstressed
+		syllable.
+	'2'	indicates the first vowel in the nucleus of a syllable
+		receiving secondary stress.
+	'1'	indicates the first vowel in the nucleus of a syllable
+		receiving primary stress.
+
+**** Foreign words and Irregular Phoneme-Grapheme Correspondences ****
+
+The last field in each line indicates whether the word uses foreign or
+irregular phoneme to grapheme correspondences.
+
+	'1'	 indicates an irregular word.
+	'2'	 indicates a foreign word.
+	'0'	 is used for all other words.
+
+Examples:
+
+Foreign words -
+							phoneme->grapheme
+							option not found
+word		phonemes	stress and	code	in other words
+				syllable info	for
+						foreign &
+						irregular words
+
+abattoir	@bxt-+-r	1<0<>2<<	2	/+/ -> 'oi'
+beaujolais	b-o-Zxle--	>2<<>0>1<<	2	/Z/ -> 'j' and
+							/e/ -> 'ais'
+tortilla	tcrti--a	>0<>1>>0	2	/i/ -> 'ill'
+pizza		pi!-x	 	>1<>0		2	/!/ -> 'zz'
+fjord		ficrd		>01<<		2	/i/ -> 'j'
+
+These words are all marked with '2's in their record to indicate a foreign
+word.  
+
+Irregular words -
+
+asthma		@z--mx		1<>>>0		1
+caesura		sI-ZUrx		>0<>1<0		1
+hallelujah	h@l-xluyx-	>2<>0>1>0<	1
+isthmus		Is--mxs		1<>>>0<		1
+yeoman		y-omxn	>	1<>0<		1
+
+These words contain irregular phoneme-grapheme correspondences. They are
+marked with '1's at the end of their fields.  Seventy-one of the dictionary
+words use unique phoneme-letter pairs. These are either silent letters,
+where some letters are not pronounced, or unique spellings, where some
+letters are pronounced in irregular ways.
+
+**** Dictionary Sources *****
+
+Initial phoneme codes were generated programmatically from the word spelling
+and then were extensively checked and corrected by matching phonemes used by
+Hanna et al to those used in the Webster's Pocket Dictionary and Webster's
+New Collegiate Dictionary.  (Hanna,R.R., Hanna, J.S., Hodges, R.E. & Rudorf,
+E.H.  (1966). Phoneme-grapheme correspondences as cues to spelling
+improvement, U.S. Department of Health, Education and Welfare, Office of
+Education, Washington, DC: U.S. Government Printing Office.) 
+ 
+The phonetic codings were "spoken" thru a DECtalk speech synthesizer to
+insure accurate pronunciation. The original phoneme lists were expanded and
+changed to include all the necessary correspondences for pronunciation and
+spelling of the words in the corpus. 
+
+**** One-to-One Correspondence Constraint ****
+
+A one-to-one phoneme to letter correspondence was needed for NETtalk, a
+backpropagation network which learns to map strings of letters into strings
+of phonemes. This constraint forced the compromises listed below.  Two major
+types of decisions had to be made to insure that phoneme-grapheme
+correspondences were one-to-one.  The decisions concerned:
+
+	1) How to handle phonemes that were written with more than one letter
+And 
+	2) How to handle letters that were spoken using more than one phoneme
+
+**** Placement of Phonemes that Correspond to Multiple Letters ****
+
+Phonemes may correspond to as many as 5 letters. When this happens, one
+letter is assigned to the phoneme and the remaining letters are represented
+in the phonetic code by hyphens.
+ 
+Usually, when a phoneme corresponds to a letter cluster, the phoneme is most
+closely associated with the first letter of the cluster, and is,
+accordingly, placed in the same position as the first letter.  Hyphens are
+placed in the remaining positions.  In some cases there is a letter common
+to many or all of the letter clusters associated with a particular phoneme,
+and the letter does not come first in some of the clusters.  In these cases
+the phoneme is placed in a position corresponding to that letter, and the
+other letter positions are filled with hyphens.  For example, the sound /n/
+is associated with the letters 'nd.' This is coded as /n-/, with the /n/ in
+the same position as the letter 'n,' and the hyphen in the position of the
+'d.' The /n/ sound is also written as 'gn,' 'sn' and 'kn'. Here, the /n/
+phoneme is associated with the common 'n,' not the differing initial
+letters, so all of these graphemes are coded as /-n/, where the /n/ is
+placed opposite the second letter 'n' instead of the letter that varies.
+
+**** Phonemes with no Letters to Match **** 
+
+Some words used phonemes that were not matched by any letters in the word.
+The word 'eighth' is an example.  'Eighth' is phonemically coded by Webster's
+as /etT/, but there is no clear letter for the /t/.  The dictionary uses
+/e---T-/, dropping the /t/.
+
+Another example concerns those instances when /y/ plus another vowel sound
+are written with a single vowel in foreign words.  The double phoneme was
+replaced with the second vowel sound based on the DECtalk pronunciation of
+the double phoneme, the /y/ alone, and the second vowel alone.
+
+If a double phoneme corresponding to a single grapheme appeared in several
+words, a new phoneme symbolizing the double sound was created.  Five such
+combination phonemes were used.
+
+They are /X/ = /ks/
+         /K/ = /kS/
+         /#/ = /gz/
+	 /Z/ = /zh/
+     and /!/ = /tz/
+
+/X/ /K/ and /#/ are all used to represent 'x'. 
+ 
+/Z/ is used by single letter graphemes 'z' 'g' and 's' for 
+the double /zh/ sound.  
+ 
+The last combination phoneme, /!/ = /tz/, is used for the foreign
+'z'. 
+
+**** Foreign Words ****
+
+Some words in the dictionary use non-English phoneme-letter pairs. New
+phoneme to letter correspondences and entirely new phonemes were added to
+accommodate coding these words.  The new phonemes are /!/ = /tz/, discussed
+above, and /+/, which is approximated by /wa/ and represents a French vowel
+sound.  
+

@@ -54,7 +54,7 @@ def train_and_eval_model(run_params, iterations=21):
 
     # Data preprocessing
     datasets = {
-        run_params[12]:                                             # Name of the dataset. Same as folder name in /celex-data/
+        run_params[12]:                                             # Name of the dataset. Same as folder name in /data/
             {
                 'columns': {0:'raw_tokens', 1:'boundaries'},  # CoNLL format for the input data (tab-delineated). Column 0 contains phones, column 1 contains syllable boundary information
                 'label': 'boundaries'                         # Which column we like to predict

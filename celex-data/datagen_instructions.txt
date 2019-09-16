@@ -1,9 +1,0 @@
-How to generate the required data files
-
-1. Open the CELEX sqlite database in 'DB Browser for SQLite'.
-2. Export the desired table to JSON. Ex: optimized_disc.
-3. Move the file to this celex folder. 
-4. Generate the dev.txt, train.txt, and test.txt files:
-	>>> python3 split.py fname.json train_percent test_percent dev_percent
-5. move generated files to a folder named by language. Ex: english
-

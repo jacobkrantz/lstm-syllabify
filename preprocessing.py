@@ -52,9 +52,9 @@ def load_dataset(datasets, do_pad_words):
     for datasetName, dataset in datasets.items():
         dataset_columns = dataset['columns']
 
-        trainData = 'celex-data/%s/train.txt' % datasetName 
-        devData = 'celex-data/%s/dev.txt' % datasetName 
-        testData = 'celex-data/%s/test.txt' % datasetName 
+        trainData = 'data/%s/train.txt' % datasetName 
+        devData = 'data/%s/dev.txt' % datasetName 
+        testData = 'data/%s/test.txt' % datasetName 
         paths = {'train_matrix': trainData, 'dev_matrix': devData, 'test_matrix': testData}
 
         logging.info(":: Transform " + datasetName + " dataset ::")
