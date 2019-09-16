@@ -107,14 +107,11 @@ dataset_names = [
     'english',
     'italian',
     'basque',
-    'NETtalkTrain',
-    'largeDutch',
+    'dutch',
     'manipuri',
     'french'
 ]
 
 for dataset in dataset_names:
     final_params_large[-1] = dataset
-    final_params_large[0] = 'softmax-' + dataset
-    final_params_large[11] = 'softmax'
     train_and_eval_model(final_params_large)
