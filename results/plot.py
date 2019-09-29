@@ -3,11 +3,10 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 
-font = {
+matplotlib.rc('font', **{
     'weight' : 'bold',
     'size' : 22
-}
-matplotlib.rc('font', **font)
+})
 
 def plot(csv_file):
     """
@@ -29,7 +28,6 @@ def plot(csv_file):
     )
     """
     df = pd.read_csv(csv_file, delimiter='\t', header=None, usecols=[1,2,3,4,5])
-
     fig = plt.figure()
 
     ax1 = fig.add_subplot(111)
