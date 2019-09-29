@@ -113,6 +113,6 @@ dataset_names = [
 ]
 
 for dataset in dataset_names:
-    if dataset == 'french:'
+    if dataset == 'french':
         final_params_large[-1] = dataset
         train_and_eval_model(final_params_large)
