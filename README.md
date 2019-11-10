@@ -37,9 +37,7 @@ E	0
 
 ###  Citing lstm-syllabify  
 
-If this project contributed to your research, please cite the following [paper](). *paper is processing, not available just yet.*
-```
-```
+If this project contributed to your research, please cite the following [paper](https://arxiv.org/abs/1909.13362): *Language-Agnostic Syllabification with Neural Sequence Labeling*.  
 
 ### Contact  
 
