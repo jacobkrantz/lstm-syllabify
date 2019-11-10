@@ -28,6 +28,7 @@ csv column structure:
     )
 """
 
+
 def analyze(res_dir_name):
     res_dir_name = str(res_dir_name)
     epoch_finished_at = []
@@ -37,20 +38,20 @@ def analyze(res_dir_name):
     best_dev_accuracy = []
     test_accuracy = []
 
-    res_dir = os.getcwd() + '/' + res_dir_name + '/'
+    res_dir = os.getcwd() + "/" + res_dir_name + "/"
 
     if not os.path.isdir(res_dir):
-        raise ValueError(res_dir + ' is not a valid directory')
+        raise ValueError(res_dir + " is not a valid directory")
 
     for filename in os.listdir(res_dir):
-        with open(res_dir + filename, 'r') as f:
-            csv_reader = csv.reader(f, delimiter='\t')
+        with open(res_dir + filename, "r") as f:
+            csv_reader = csv.reader(f, delimiter="\t")
 
             # ignore all lines but the last
             for epoch in csv_reader:
                 epoch_training_time.append(float(epoch[6]))
                 epoch_eval_time.append(float(epoch[8]))
-            
+
             epoch_finished_at.append(int(epoch[0]))
             training_times.append(int(float(epoch[7])))
             best_dev_accuracy.append(float(epoch[4]))
@@ -64,19 +65,58 @@ def analyze(res_dir_name):
     test_accuracy.pop(i_lowest)
 
     # display analysis
-    print('---------------------------------------')
-    print('Directory analyzed:\t\t', res_dir_name)
-    print('---------------------------------------')
-    print('Average dev accuracy:\t\t',  '{number:.{digits}f}'.format(number=100*np.mean(best_dev_accuracy),digits=3))
-    print('Standard deviation dev:\t\t ', '{number:.{digits}f}'.format(number=100*statistics.stdev(best_dev_accuracy),digits=3))
-    print('Average test accuracy:\t\t', '{number:.{digits}f}'.format(number=100*np.mean(test_accuracy),digits=3))
-    print('Standard deviation test\t\t ', '{number:.{digits}f}'.format(number=100*statistics.stdev(test_accuracy),digits=3))
-    print('')
-    print('Average total training time:\t', '{number:.{digits}f}'.format(number=np.mean(training_times),digits=3))
-    print('Average epoch training time:\t', '{number:.{digits}f}'.format(number=np.mean(epoch_training_time),digits=3))
-    print('Average epoch eval time:\t', '{number:.{digits}f}'.format(number=np.mean(epoch_eval_time),digits=3))
-    print('Average number of total epochs:\t', '{number:.{digits}f}'.format(number=np.mean(epoch_finished_at),digits=2))
-    print('number of experiments analyzed:\t', len(epoch_finished_at))
+    print("---------------------------------------")
+    print("Directory analyzed:\t\t", res_dir_name)
+    print("---------------------------------------")
+    print(
+        "Average dev accuracy:\t\t",
+        "{number:.{digits}f}".format(
+            number=100 * np.mean(best_dev_accuracy), digits=3
+        ),
+    )
+    print(
+        "Standard deviation dev:\t\t ",
+        "{number:.{digits}f}".format(
+            number=100 * statistics.stdev(best_dev_accuracy), digits=3
+        ),
+    )
+    print(
+        "Average test accuracy:\t\t",
+        "{number:.{digits}f}".format(
+            number=100 * np.mean(test_accuracy), digits=3
+        ),
+    )
+    print(
+        "Standard deviation test\t\t ",
+        "{number:.{digits}f}".format(
+            number=100 * statistics.stdev(test_accuracy), digits=3
+        ),
+    )
+    print("")
+    print(
+        "Average total training time:\t",
+        "{number:.{digits}f}".format(number=np.mean(training_times), digits=3),
+    )
+    print(
+        "Average epoch training time:\t",
+        "{number:.{digits}f}".format(
+            number=np.mean(epoch_training_time), digits=3
+        ),
+    )
+    print(
+        "Average epoch eval time:\t",
+        "{number:.{digits}f}".format(
+            number=np.mean(epoch_eval_time), digits=3
+        ),
+    )
+    print(
+        "Average number of total epochs:\t",
+        "{number:.{digits}f}".format(
+            number=np.mean(epoch_finished_at), digits=2
+        ),
+    )
+    print("number of experiments analyzed:\t", len(epoch_finished_at))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     fire.Fire(analyze)
