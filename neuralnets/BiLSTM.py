@@ -10,14 +10,7 @@ from .utils import try_tensorflow_import
 try_tensorflow_import()
 
 from tensorflow import keras
-from tensorflow.keras.optimizers import (
-    Adam,
-    Nadam,
-    RMSprop,
-    Adadelta,
-    Adagrad,
-    SGD,
-)
+from tensorflow.keras.optimizers import Adam, Nadam, RMSprop, Adadelta, Adagrad, SGD
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import *
 import tensorflow.keras.backend as K
@@ -42,82 +35,56 @@ class BiLSTM:
 
     def __init__(self, cfg):
         self.cfg = cfg
-        self.models = None
+        self.model = None
         self.model_save_path = cfg.TRAINING.MODEL_SAVE_PATH
         self.results_save_path = None
 
-    def set_vocab_size(
-        self, vocab_size, n_class_labels, word_length, mappings
-    ):
+    def set_vocab(self, vocab_size, n_class_labels, word_length, mappings):
         # class labels are syllable boundary labels
         self.vocab_size = vocab_size
         self.n_class_labels = n_class_labels
         self.word_length = word_length
         self.mappings = mappings  # used indirectly during model reload
 
-    def set_dataset(self, datasets, data):
-        self.datasets = datasets
+    def set_dataset(self, dataset, data):
+        self.dataset = dataset
         self.data = data
 
-        # Create some helping variables
-        self.main_model_name = None
         self.epoch = 0
         self.learning_rate_updates = {"sgd": {1: 0.1, 3: 0.05, 5: 0.01}}
-        self.model_names = list(self.datasets.keys())
-        self.label_keys = {}
         self.train_mini_batch_ranges = None
         self.train_word_length_ranges = None
 
-        for model_name in self.model_names:
-            label_key = self.datasets[model_name]["label"]
-            self.label_keys[model_name] = label_key
+        self.label_key = self.dataset["label"]
 
-            logging.info("--- %s ---" % model_name)
-            logging.info(
-                "%d train words" % len(self.data[model_name]["train_matrix"])
-            )
-            logging.info(
-                "%d dev words" % len(self.data[model_name]["dev_matrix"])
-            )
-            logging.info(
-                "%d test words" % len(self.data[model_name]["test_matrix"])
-            )
-
-        self.main_model_name = self.model_names[0]
+        logging.info("--- Dataset Details ---")
+        logging.info("%d train words" % len(self.data["train_matrix"]))
+        logging.info("%d dev words" % len(self.data["dev_matrix"]))
+        logging.info("%d test words" % len(self.data["test_matrix"]))
 
     def build_model(self):
-        self.models = {}
-
         if self.word_length <= 0:  # variable length words
             self.word_length = None
 
         tokens_input = Input(
-            shape=(
-                self.word_length,
-            ),  # use explicit word length for CNNs to work
+            shape=(self.word_length,),  # use explicit word length for CNNs to work
             dtype="float32",
             name="phones_input",
         )
 
+        # output shape: (batch_size, word_length, embedding size)
         tokens = Embedding(
             input_dim=self.vocab_size,
             output_dim=self.cfg.MODEL.EMBEDDING_SIZE,
             trainable=True,
             name="phone_embeddings",
-        )(
-            tokens_input
-        )  # output shape: (batch_size, word_length, embedding size)
+        )(tokens_input)
 
         # Add recurrent layers
         if self.cfg.MODEL.USE_RNN:
             assert self.cfg.MODEL.RNN in ["gru", "lstm"]
-            if self.cfg.MODEL.RNN == "gru":
-                rnn_func = GRU
-            elif self.cfg.MODEL.RNN == "lstm":
-                rnn_func = LSTM
+            rnn_func = GRU if self.cfg.MODEL.RNN == "gru" else LSTM
 
-            recurrent_layer = tokens
-            cnt = 1
             recurrent_layer = Bidirectional(
                 rnn_func(
                     units=self.cfg.MODEL.RNN_SIZE,
@@ -125,11 +92,12 @@ class BiLSTM:
                     dropout=self.cfg.MODEL.DROPOUT,
                     recurrent_dropout=self.cfg.MODEL.RECURRENT_DROPOUT,
                 ),
-                name="Bi" + self.cfg.MODEL.RNN + "_" + str(cnt),
-            )(recurrent_layer)
-            cnt += 1
+                name="Bi" + self.cfg.MODEL.RNN,
+            )(tokens)
 
-        # Add CNNs, inspired by Ma and Hovy, 2016. CNNs are parallel to LSTM instead of prior.
+        # Add CNNs, inspired by Ma and Hovy, 2016. In our case,
+        #   the CNNs are parallel to LSTM instead of prior.
+        # TODO: add RELU activation function.
         if self.cfg.MODEL.USE_CNN:
             cnn_layer = tokens
             # how to reshape::: re = Reshape((tokens.shape[1],tokens.shape[2],) + (1, ))(tokens) #  + (1, )
@@ -157,94 +125,77 @@ class BiLSTM:
             else:
                 concat_layer = cnn_layer
         else:
-            assert (
-                self.cfg.MODEL.USE_RNN
-            ), "Either RNN or CNN must be in network."
+            assert self.cfg.MODEL.USE_RNN, "Either RNN or CNN must be in network."
             concat_layer = recurrent_layer
 
         # Add output classifier
-        for model_name in self.model_names:
-            output = concat_layer
-            assert self.cfg.MODEL.CLASSIFIER in [
-                "softmax",
-                "crf",
-            ], "classifier must be either 'softmax' or 'crf'"
-            if self.cfg.MODEL.CLASSIFIER == "softmax":
-                output = TimeDistributed(
-                    Dense(units=self.n_class_labels, activation="softmax"),
-                    name=model_name + "_softmax",
-                )(output)
-                lossFct = "sparse_categorical_crossentropy"
+        output = concat_layer
+        assert self.cfg.MODEL.CLASSIFIER in [
+            "softmax",
+            "crf",
+        ], "classifier must be either 'softmax' or 'crf'"
+        if self.cfg.MODEL.CLASSIFIER == "softmax":
+            output = TimeDistributed(
+                Dense(units=self.n_class_labels, activation="softmax"), name="softmax"
+            )(output)
+            loss_function = "sparse_categorical_crossentropy"
 
-            elif (
-                self.cfg.MODEL.CLASSIFIER == "crf"
-            ):  # use Philipp Gross' ChainCRF
-                output = TimeDistributed(
-                    Dense(units=self.n_class_labels, activation=None),
-                    name=model_name + "_hidden_lin_layer",
-                )(output)
-                crf = ChainCRF(name=model_name + "_crf")
-                output = crf(output)
-                lossFct = crf.sparse_loss
+        elif self.cfg.MODEL.CLASSIFIER == "crf":  # use Philipp Gross' ChainCRF
+            output = TimeDistributed(
+                Dense(units=self.n_class_labels, activation=None),
+                name="hidden_lin_layer",
+            )(output)
+            crf = ChainCRF(name="crf")
+            output = crf(output)
+            loss_function = crf.sparse_loss
 
-            # :: Parameters for the optimizer ::
-            optimizerParams = {}
-            if self.cfg.OPTIMIZER.CLIP_NORM > 0.0:
-                optimizerParams["clipnorm"] = self.cfg.OPTIMIZER.CLIP_NORM
-            if self.cfg.OPTIMIZER.CLIP_VALUE > 0:
-                optimizerParams["clipvalue"] = self.cfg.OPTIMIZER.CLIP_VALUE
+        # :: Parameters for the optimizer ::
+        optim_params = {}
+        if self.cfg.OPTIMIZER.CLIP_NORM > 0.0:
+            optim_params["clipnorm"] = self.cfg.OPTIMIZER.CLIP_NORM
+        if self.cfg.OPTIMIZER.CLIP_VALUE > 0:
+            optim_params["clipvalue"] = self.cfg.OPTIMIZER.CLIP_VALUE
 
-            if self.cfg.OPTIMIZER.OPTIMIZER == "adam":
-                opt = Adam(**optimizerParams)
-            elif self.cfg.OPTIMIZER.OPTIMIZER == "nadam":
-                opt = Nadam(**optimizerParams)
-            elif self.cfg.OPTIMIZER.OPTIMIZER == "rmsprop":
-                opt = RMSprop(**optimizerParams)
-            elif self.cfg.OPTIMIZER.OPTIMIZER == "adadelta":
-                opt = Adadelta(**optimizerParams)
-            elif self.cfg.OPTIMIZER.OPTIMIZER == "adagrad":
-                opt = Adagrad(**optimizerParams)
-            elif self.cfg.OPTIMIZER.OPTIMIZER == "sgd":
-                opt = SGD(lr=0.1, **optimizerParams)
-            else:
-                assert False, "Optmizer not in list of allowable optimizers"
+        optimizer = self.cfg.OPTIMIZER.OPTIMIZER
+        if optimizer == "adam":
+            opt = Adam(**optim_params)
+        elif optimizer == "nadam":
+            opt = Nadam(**optim_params)
+        elif optimizer == "rmsprop":
+            opt = RMSprop(**optim_params)
+        elif optimizer == "adadelta":
+            opt = Adadelta(**optim_params)
+        elif optimizer == "adagrad":
+            opt = Adagrad(**optim_params)
+        elif optimizer == "sgd":
+            opt = SGD(lr=0.1, **optim_params)
+        else:
+            assert False, "Optmizer not in list of allowable optimizers"
 
-            model = Model(inputs=[tokens_input], outputs=[output])
-            model.compile(loss=lossFct, optimizer=opt)
-            model.summary(line_length=100)
-            self.models[model_name] = model
+        model = Model(inputs=[tokens_input], outputs=[output])
+        model.compile(loss=loss_function, optimizer=opt)
+        model.summary(line_length=100)
+        self.model = model
 
     def train_model(self):
         self.epoch += 1
 
         if (
             self.cfg.OPTIMIZER.OPTIMIZER in self.learning_rate_updates
-            and self.epoch
-            in self.learning_rate_updates[self.cfg.OPTIMIZER.OPTIMIZER]
+            and self.epoch in self.learning_rate_updates[self.cfg.OPTIMIZER.OPTIMIZER]
         ):
-            logging.info(
-                "Update Learning Rate to %f"
-                % (
-                    self.learning_rate_updates[self.cfg.OPTIMIZER.OPTIMIZER][
-                        self.epoch
-                    ]
-                )
-            )
-            for model_name in self.model_names:
-                K.set_value(
-                    self.models[model_name].optimizer.lr,
-                    self.learning_rate_updates[self.cfg.OPTIMIZER.OPTIMIZER][
-                        self.epoch
-                    ],
-                )
+            lr_update = self.learning_rate_updates[self.cfg.OPTIMIZER.OPTIMIZER][
+                self.epoch
+            ]
+            logging.info("Update Learning Rate to %f" % (lr_update))
+            K.set_value(self.model.optimizer.lr, lr_update)
 
+        loss = 0.0
         for batch in self.minibatch_iterate_dataset():
-            for model_name in self.model_names:
-                nn_labels = batch[model_name][0]
-                nn_input = batch[model_name][1:]
-                self.models[model_name].train_on_batch(nn_input, nn_labels)
+            loss += self.model.train_on_batch(x=batch[1:], y=batch[0])
+        return loss
 
-    def minibatch_iterate_dataset(self, model_names=None):
+    def minibatch_iterate_dataset(self):
         """
         Create based on word length mini-batches with approx. the same size. 
         Words and mini-batch chunks are shuffled and used to the train the model
@@ -253,184 +204,157 @@ class BiLSTM:
             """ Create mini batch ranges """
             self.train_word_length_ranges = {}
             self.train_mini_batch_ranges = {}
-            for model_name in self.model_names:
-                train_data = self.data[model_name]["train_matrix"]
-                train_data.sort(
-                    key=lambda x: len(x["tokens"])
-                )  # Sort train matrix by word length
-                train_ranges = []
-                old_word_len = len(train_data[0]["tokens"])
-                idxStart = 0
 
-                # Find start and end of ranges with words with same length
-                for idx in range(len(train_data)):
-                    word_len = len(train_data[idx]["tokens"])
+            train_data = self.data["train_matrix"]
+            train_data.sort(
+                key=lambda x: len(x["tokens"])
+            )  # Sort train data by word length
+            train_ranges = []
+            old_word_len = len(train_data[0]["tokens"])
+            idxStart = 0
 
-                    if word_len != old_word_len:
-                        train_ranges.append((idxStart, idx))
-                        idxStart = idx
+            # Find start and end of ranges with words with same length
+            for idx in range(len(train_data)):
+                word_len = len(train_data[idx]["tokens"])
 
-                    old_word_len = word_len
+                if word_len != old_word_len:
+                    train_ranges.append((idxStart, idx))
+                    idxStart = idx
 
-                # Add last word
-                train_ranges.append((idxStart, len(train_data)))
+                old_word_len = word_len
 
-                # Break up ranges into smaller mini batch sizes
-                mini_batch_ranges = []
-                for batch_range in train_ranges:
-                    range_len = batch_range[1] - batch_range[0]
+            # Add last word
+            train_ranges.append((idxStart, len(train_data)))
 
-                    bins = int(
-                        np.ceil(
-                            range_len
-                            / float(self.cfg.TRAINING.MINI_BATCH_SIZE)
-                        )
+            # Break up ranges into smaller mini batch sizes
+            mini_batch_ranges = []
+            for batch_range in train_ranges:
+                range_len = batch_range[1] - batch_range[0]
+
+                bins = int(
+                    np.ceil(range_len / float(self.cfg.TRAINING.MINI_BATCH_SIZE))
+                )
+                bin_size = int(np.ceil(range_len / float(bins)))
+
+                for bin_nr in range(bins):
+                    startIdx = bin_nr * bin_size + batch_range[0]
+                    endIdx = min(
+                        batch_range[1], (bin_nr + 1) * bin_size + batch_range[0]
                     )
-                    bin_size = int(np.ceil(range_len / float(bins)))
+                    mini_batch_ranges.append((startIdx, endIdx))
 
-                    for bin_nr in range(bins):
-                        startIdx = bin_nr * bin_size + batch_range[0]
-                        endIdx = min(
-                            batch_range[1],
-                            (bin_nr + 1) * bin_size + batch_range[0],
-                        )
-                        mini_batch_ranges.append((startIdx, endIdx))
-
-                self.train_word_length_ranges[model_name] = train_ranges
-                self.train_mini_batch_ranges[model_name] = mini_batch_ranges
-
-        if model_names == None:
-            model_names = self.model_names
+                self.train_word_length_ranges = train_ranges
+                self.train_mini_batch_ranges = mini_batch_ranges
 
         # Shuffle training data
-        for model_name in model_names:
-            # 1. Shuffle words that have the same length
-            x = self.data[model_name]["train_matrix"]
-            for data_range in self.train_word_length_ranges[model_name]:
-                for i in reversed(range(data_range[0] + 1, data_range[1])):
-                    # pick an element in x[:i+1] with which to exchange x[i]
-                    j = random.randint(data_range[0], i)
-                    x[i], x[j] = x[j], x[i]
+        # 1. Shuffle words that have the same length
+        x = self.data["train_matrix"]
+        for data_range in self.train_word_length_ranges:
+            for i in reversed(range(data_range[0] + 1, data_range[1])):
+                # pick an element in x[:i+1] with which to exchange x[i]
+                j = random.randint(data_range[0], i)
+                x[i], x[j] = x[j], x[i]
 
-            # 2. Shuffle the order of the mini batch ranges
-            random.shuffle(self.train_mini_batch_ranges[model_name])
+        # 2. Shuffle the order of the mini batch ranges
+        random.shuffle(self.train_mini_batch_ranges)
 
         # Iterate over the mini batch ranges
-        if self.main_model_name != None:
-            range_length = len(
-                self.train_mini_batch_ranges[self.main_model_name]
-            )
-        else:
-            range_length = min(
-                [
-                    len(self.train_mini_batch_ranges[model_name])
-                    for model_name in model_names
-                ]
-            )
+        range_length = len(self.train_mini_batch_ranges)
 
         batches = {}
         for idx in range(range_length):
             batches.clear()
-
-            for model_name in model_names:
-                trainMatrix = self.data[model_name]["train_matrix"]
-                data_range = self.train_mini_batch_ranges[model_name][
-                    idx % len(self.train_mini_batch_ranges[model_name])
+            train_data = self.data["train_matrix"]
+            data_range = self.train_mini_batch_ranges[
+                idx % len(self.train_mini_batch_ranges)
+            ]
+            labels = np.asarray(
+                [
+                    train_data[idx][self.label_key]
+                    for idx in range(data_range[0], data_range[1])
                 ]
-                labels = np.asarray(
+            )
+            labels = np.expand_dims(labels, -1)
+
+            batches = [labels]
+
+            for featureName in self.cfg.TRAINING.FEATURE_NAMES:
+                inputData = np.asarray(
                     [
-                        trainMatrix[idx][self.label_keys[model_name]]
+                        train_data[idx][featureName]
                         for idx in range(data_range[0], data_range[1])
                     ]
                 )
-                labels = np.expand_dims(labels, -1)
-
-                batches[model_name] = [labels]
-
-                for featureName in self.cfg.TRAINING.FEATURE_NAMES:
-                    inputData = np.asarray(
-                        [
-                            trainMatrix[idx][featureName]
-                            for idx in range(data_range[0], data_range[1])
-                        ]
-                    )
-                    batches[model_name].append(inputData)
+                batches.append(inputData)
 
             yield batches
 
     def fit(self, epochs):
-        if self.models is None:
+        if self.model is None:
             self.build_model()
 
-        total_train_time = 0
-        max_dev_score = {model_name: 0 for model_name in self.models.keys()}
-        max_test_score = {model_name: 0 for model_name in self.models.keys()}
+        train_time_total = 0
+        eval_time_total = 0
+        max_dev_score = 0
+        max_test_score = 0
         no_improvement_since = 0
 
         for epoch in range(epochs):
             sys.stdout.flush()
             logging.info("\n--------- Epoch %d -----------" % (epoch + 1))
 
-            start_time = time.time()
+            start_time_epoch = time.time()
             self.train_model()
-            time_diff = time.time() - start_time
-            total_train_time += time_diff
+            train_time_epoch = time.time() - start_time_epoch
+            train_time_total += train_time_epoch
             logging.info(
                 "%.2f sec for training (%.2f total)"
-                % (time_diff, total_train_time)
+                % (train_time_epoch, train_time_total)
             )
 
-            start_time = time.time()
-            for model_name in self.model_names:
-                logging.info("-- %s --" % (model_name))
-                dev_score, test_score = self.compute_acc_scores(
-                    model_name,
-                    self.data[model_name]["dev_matrix"],
-                    self.data[model_name]["test_matrix"],
-                )
+            start_time_eval = time.time()
+            dev_score, test_score = self.compute_acc_scores(
+                self.data["dev_matrix"], self.data["test_matrix"]
+            )
 
-                if dev_score > max_dev_score[model_name] or epoch == 1:
-                    max_dev_score[model_name] = dev_score
-                    max_test_score[model_name] = test_score
-                    no_improvement_since = 0
-                    # Save the model
-                    print("starting save")
-                    self.save_model(model_name, epoch, dev_score, test_score)
-                else:
-                    no_improvement_since += 1
+            if dev_score > max_dev_score or epoch == 1:
+                max_dev_score = dev_score
+                max_test_score = test_score
+                no_improvement_since = 0
+                self.save_model(epoch, dev_score, test_score)
+            else:
+                no_improvement_since += 1
 
-                if self.results_save_path != None:
-                    self.results_save_path.write(
-                        "\t".join(
-                            map(
-                                str,
-                                [
-                                    epoch + 1,
-                                    model_name,
-                                    dev_score,
-                                    test_score,
-                                    max_dev_score[model_name],
-                                    max_test_score[model_name],
-                                    time_diff,  # training time for this epoch
-                                    total_train_time,  # training time for all epochs
-                                    time.time()
-                                    - start_time,  # time for evaluation during this epoch
-                                ],
-                            )
+            eval_time_epoch = time.time() - start_time_eval
+            eval_time_total += eval_time_epoch
+            logging.info(
+                "\nScores from epoch with best dev-scores:\n  Dev-Score: %.4f\n  Test-Score %.4f"
+                % (max_dev_score, max_test_score)
+            )
+            logging.info(
+                "%.2f sec for eval (%.2f total)" % (eval_time_epoch, eval_time_total)
+            )
+
+            if self.results_save_path != None:
+                self.results_save_path.write(
+                    "\t".join(
+                        map(
+                            str,
+                            [
+                                epoch + 1,
+                                dev_score,
+                                test_score,
+                                max_dev_score,
+                                max_test_score,
+                                train_time_epoch,
+                                train_time_total,
+                                eval_time_epoch,
+                            ],
                         )
                     )
-                    self.results_save_path.write("\n")
-                    self.results_save_path.flush()
-
-                logging.info(
-                    "\nScores from epoch with best dev-scores:\n  Dev-Score: %.4f\n  Test-Score %.4f"
-                    % (max_dev_score[model_name], max_test_score[model_name])
                 )
-                logging.info("")
-
-            logging.info(
-                "%.2f sec for evaluation" % (time.time() - start_time)
-            )
+                self.results_save_path.write("\n")
+                self.results_save_path.flush()
 
             if (
                 self.cfg.TRAINING.EARLY_STOPPING > 0
@@ -445,26 +369,23 @@ class BiLSTM:
 
     def tagWords(self, words):
         """
-        words: [{'raw_tokens': ['S', 'V', 't', 'P', 'd'], 'tokens': [11, 5, 43, 36, 8]}, ...]
+        words: [{
+                    'raw_tokens': ['S', 'V', 't', 'P', 'd'],
+                    'tokens': [11, 5, 43, 36, 8]
+                }, ...]
         """
-        labels = {}
-        for model_name, model in self.models.items():
-            padded_pred_labels = self.predict_labels(model, words)
-            pred_labels = []
-            for idx in range(len(words)):
-                unpadded_pred_labels = []
-                for tokenIdx in range(len(words[idx]["tokens"])):
-                    if (
-                        words[idx]["tokens"][tokenIdx] != 0
-                    ):  # Skip padding tokens
-                        unpadded_pred_labels.append(
-                            padded_pred_labels[idx][tokenIdx]
-                        )
+        padded_pred_labels = self.predict_labels(self.model, words)
+        pred_labels = []
+        for idx in range(len(words)):
+            unpadded_pred_labels = []
+            for tokenIdx in range(len(words[idx]["tokens"])):
+                # Skip padding tokens
+                if words[idx]["tokens"][tokenIdx] != 0:
+                    unpadded_pred_labels.append(padded_pred_labels[idx][tokenIdx])
 
-                pred_labels.append(unpadded_pred_labels)
+            pred_labels.append(unpadded_pred_labels)
 
-            labels[model_name] = pred_labels
-        return labels
+        return pred_labels
 
     def get_word_lengths(self, words):
         word_lengths = {}
@@ -481,14 +402,12 @@ class BiLSTM:
         word_lengths = self.get_word_lengths(words)
 
         for indices in word_lengths.values():
-            nnInput = []
+            nn_input = []
             for feature_name in self.cfg.TRAINING.FEATURE_NAMES:
-                input_data = np.asarray(
-                    [words[idx][feature_name] for idx in indices]
-                )
-                nnInput.append(input_data)
+                input_data = np.asarray([words[idx][feature_name] for idx in indices])
+                nn_input.append(input_data)
 
-            predictions = model.predict(nnInput, verbose=False)
+            predictions = model.predict(nn_input, verbose=False)
             predictions = predictions.argmax(axis=-1)  # Predict classes
 
             predIdx = 0
@@ -498,16 +417,17 @@ class BiLSTM:
 
         return pred_labels
 
-    def compute_acc_scores(self, model_name, devMatrix, testMatrix):
+    def compute_acc_scores(self, dev_data, test_data):
         """
         Accuracy scores are reported at the word level. This means that if a single
         syllable boundary was incorrectly placed, the entire word is marked incorrect.
         
         Logs the boundary level accuracy as well.
         """
-        dev_acc, dev_bound = self.compute_acc(model_name, devMatrix)
-        test_acc, test_bound = self.compute_acc(model_name, testMatrix)
+        dev_acc, dev_bound = self.compute_acc(dev_data)
+        test_acc, test_bound = self.compute_acc(test_data)
 
+        logging.info("-- Epoch Accuracies --")
         logging.info("Word-Level Accuracy")
         logging.info("Dev: %.4f" % (dev_acc))
         logging.info("Test: %.4f" % (test_acc))
@@ -518,32 +438,24 @@ class BiLSTM:
 
         return dev_acc, test_acc
 
-    def compute_acc(self, model_name, words):
+    def compute_acc(self, words):
         """
         Returns:
             float: word level accuracy. Range: [0.,1.]
             float: boundary_level_acc. Range: [0.,1.]
         """
-        correct_labels = [
-            words[idx][self.label_keys[model_name]]
-            for idx in range(len(words))
-        ]
-        pred_labels = self.predict_labels(self.models[model_name], words)
+        correct_labels = [words[idx][self.label_key] for idx in range(len(words))]
+        pred_labels = self.predict_labels(self.model, words)
 
         num_labels = 0
         num_corr_labels = 0
-        num_words = 0
         num_corr_words = 0
-        word_was_wrong = False
+
         for word_id in range(len(correct_labels)):
-            num_words += 1
             word_was_wrong = False
             for tokenId in range(len(correct_labels[word_id])):
                 num_labels += 1
-                if (
-                    correct_labels[word_id][tokenId]
-                    == pred_labels[word_id][tokenId]
-                ):
+                if correct_labels[word_id][tokenId] == pred_labels[word_id][tokenId]:
                     num_corr_labels += 1
                 else:
                     word_was_wrong = True
@@ -552,7 +464,7 @@ class BiLSTM:
                 num_corr_words += 1
 
         boundary_level_acc = num_corr_labels / float(num_labels)
-        word_level_acc = num_corr_words / float(num_words)
+        word_level_acc = num_corr_words / len(words)
         return word_level_acc, boundary_level_acc
 
     def store_results(self, results_path):
@@ -565,15 +477,15 @@ class BiLSTM:
         else:
             self.results_save_path = None
 
-    def save_model(self, model_name, epoch, dev_score, test_score):
+    def save_model(self, epoch, dev_score, test_score):
         import json
         import h5py
 
         save_path = (
-            self.model_save_path.replace("[DevScore]", "%.4f" % dev_score)
+            self.model_save_path.replace("[DATASET]", self.cfg.TRAINING.DATASET)
+            .replace("[DevScore]", "%.4f" % dev_score)
             .replace("[TestScore]", "%.4f" % test_score)
             .replace("[Epoch]", str(epoch + 1))
-            .replace("[ModelName]", model_name)
         )
 
         directory = os.path.dirname(save_path)
@@ -581,22 +493,15 @@ class BiLSTM:
             os.makedirs(directory)
 
         if os.path.isfile(save_path):
-            logging.info(
-                f"Model {save_path} already exists. Model will be overwritten"
-            )
+            logging.info(f"Model {save_path} already exists. Model will be overwritten")
 
-        print(save_path)
         res = keras.models.save_model(
-            model=self.models[model_name],
-            filepath=save_path,
-            overwrite=True,
-            save_format="h5",
+            model=self.model, filepath=save_path, overwrite=True, save_format="h5"
         )
 
         with h5py.File(save_path, "a") as h5file:
             h5file.attrs["mappings"] = json.dumps(self.mappings)
-            h5file.attrs["model_name"] = model_name
-            h5file.attrs["label_key"] = self.datasets[model_name]["label"]
+            h5file.attrs["label_key"] = self.dataset["label"]
             h5file.attrs["vocab_size"] = self.vocab_size
             h5file.attrs["n_class_labels"] = self.n_class_labels
             h5file.attrs["word_length"] = (
@@ -608,14 +513,13 @@ class BiLSTM:
         import h5py
         import json
 
-        with h5py.File(model_path, "r") as f:
-            cfg = get_cfg_defaults()
-            cfg.merge_from_file(cfg_path)
-            cfg.freeze()
-            print(cfg)
+        cfg = get_cfg_defaults()
+        cfg.merge_from_file(cfg_path)
+        cfg.freeze()
+        logging.info(cfg)
 
+        with h5py.File(model_path, "r") as f:
             mappings = json.loads(f.attrs["mappings"])
-            model_name = f.attrs["model_name"]
             label_key = f.attrs["label_key"]
             vocab_size = f.attrs["vocab_size"]
             n_class_labels = f.attrs["n_class_labels"]
@@ -626,13 +530,9 @@ class BiLSTM:
 
             custom_objects = create_custom_objects()
 
-        model = keras.models.load_model(
-            model_path, custom_objects=custom_objects
-        )
+        model = keras.models.load_model(model_path, custom_objects=custom_objects)
         bilstm = BiLSTM(cfg)
-        bilstm.set_vocab_size(
-            vocab_size, n_class_labels, word_length, mappings
-        )
-        bilstm.models = {model_name: model}
-        bilstm.label_keys = {model_name: label_key}
+        bilstm.set_vocab(vocab_size, n_class_labels, word_length, mappings)
+        bilstm.model = model
+        bilstm.label_key = label_key
         return bilstm

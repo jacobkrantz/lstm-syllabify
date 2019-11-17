@@ -123,9 +123,7 @@ def _forward(x, reduce_step, initial_states, U):
     U_shared = K.expand_dims(K.expand_dims(U, 0), 0)
 
     inputs = K.expand_dims(x[:, 1:, :], 2) + U_shared
-    inputs = K.concatenate(
-        [inputs, K.zeros_like(inputs[:, -1:, :, :])], axis=1
-    )
+    inputs = K.concatenate([inputs, K.zeros_like(inputs[:, -1:, :, :])], axis=1)
 
     last, values, _ = K.rnn(_forward_step, inputs, initial_states)
     return last, values
@@ -149,9 +147,7 @@ def _backward(gamma):
         return y_t, [K.expand_dims(y_t, 0)]
 
     initial_states = [K.expand_dims(K.zeros_like(gamma[:, 0, 0]), 0)]
-    _, y_rev, _ = K.rnn(
-        _backward_step, gamma, initial_states, go_backwards=True
-    )
+    _, y_rev, _ = K.rnn(_backward_step, gamma, initial_states, go_backwards=True)
     y = K.reverse(y_rev, 1)
     return y
 
@@ -317,24 +313,16 @@ class ChainCRF(Layer):
         """
         y_true = K.cast(y_true, "int32")
         y_true = K.squeeze(y_true, 2)
-        return sparse_chain_crf_loss(
-            y_true, y_pred, self.U, self.b_start, self.b_end
-        )
+        return sparse_chain_crf_loss(y_true, y_pred, self.U, self.b_start, self.b_end)
 
     def get_config(self):
         config = {
             "init": initializers.serialize(self.init),
             "U_regularizer": regularizers.serialize(self.U_regularizer),
-            "b_start_regularizer": regularizers.serialize(
-                self.b_start_regularizer
-            ),
-            "b_end_regularizer": regularizers.serialize(
-                self.b_end_regularizer
-            ),
+            "b_start_regularizer": regularizers.serialize(self.b_start_regularizer),
+            "b_end_regularizer": regularizers.serialize(self.b_end_regularizer),
             "U_constraint": constraints.serialize(self.U_constraint),
-            "b_start_constraint": constraints.serialize(
-                self.b_start_constraint
-            ),
+            "b_start_constraint": constraints.serialize(self.b_start_constraint),
             "b_end_constraint": constraints.serialize(self.b_end_constraint),
         }
         base_config = super(ChainCRF, self).get_config()

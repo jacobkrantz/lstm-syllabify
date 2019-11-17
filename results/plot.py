@@ -15,25 +15,21 @@ def plot(csv_file):
     csv structure:
     (
         0 epoch,
-        1 model name,
-        2 dev word accuracy, 
-        3 word accuracy,
-        4 best dev word accuracy,
-        5 best test word accuracy,
-        6 training time for epoch (s),
-        7 total training time thus far (s),
-        8 evaluation time
+        1 dev word accuracy, 
+        2 word accuracy,
+        3 best dev word accuracy,
+        4 best test word accuracy,
+        5 training time for epoch (s),
+        6 total training time thus far (s),
+        7 evaluation time
     )
     """
-    df = pd.read_csv(
-        csv_file, delimiter="\t", header=None, usecols=[1, 2, 3, 4, 5]
-    )
+    df = pd.read_csv(csv_file, delimiter="\t", header=None, usecols=[1, 2, 3, 4, 5])
     fig = plt.figure()
 
     ax1 = fig.add_subplot(111)
     ax1.set_title(
-        next(iter(set(df[1].values)))
-        + " syllabification training accuracy over epochs"
+        next(iter(set(df[1].values))) + " syllabification training accuracy over epochs"
     )
     ax1.set_xlabel("Epochs")
     ax1.set_ylabel("Word-Level Accuracy")

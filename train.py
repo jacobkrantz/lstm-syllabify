@@ -36,41 +36,36 @@ def create_directory(name):
         os.mkdir(PATH + "/" + str(name))
 
 
-def train_and_eval_model(cfg, dataset):
+def train_and_eval_model(cfg):
     """
     Load data and train model
     args:
         cfg (YACS YAML config)
-        dataset: str, language dataset name
     """
 
     # Data preprocessing
-    datasets = {
-        dataset: {  # Name of the dataset. Same as folder name in /data/
-            "columns": {0: "raw_tokens", 1: "boundaries"},
-            # CoNLL format (tab-delineated)
-            #   Column 0: phones
-            #   Column 1: syllable boundary
-            "label": "boundaries",  # Which column we like to predict
-        }
+    dataset = {
+        "columns": {0: "raw_tokens", 1: "boundaries"},
+        # CoNLL format (tab-delineated)
+        #   Column 0: phones
+        #   Column 1: syllable boundary
+        "label": "boundaries",  # Which column we like to predict
     }
 
     # Load the embeddings and the dataset. Choose whether or not to pad the words.
     # Right now, padding must be done if CRF is chosen for output layer.
     # The CRF layer does not support masking.
     embeddings, data, mappings, vocab_size, n_class_labels, word_length = load_dataset(
-        datasets, do_pad_words=True
+        dataset, dataset_name=cfg.TRAINING.DATASET, do_pad_words=True
     )
 
     create_directory(cfg.CONFIG_NAME)
-    logger.info(
-        f"Starting training of `{cfg.CONFIG_NAME}` on dataset `{dataset}`"
-    )
+    logger.info(f"Starting training of `{cfg.CONFIG_NAME}` on dataset `{dataset}`")
 
     for training_repeat in range(cfg.TRAINING.TRAINING_REPEATS):
         model = BiLSTM(cfg)
-        model.set_vocab_size(vocab_size, n_class_labels, word_length, mappings)
-        model.set_dataset(datasets, data)
+        model.set_vocab(vocab_size, n_class_labels, word_length, mappings)
+        model.set_dataset(dataset, data)
 
         # Path to store performance scores for dev / test
         model.store_results(
@@ -93,5 +88,4 @@ if __name__ == "__main__":
     cfg.merge_from_file(args.config)
     cfg.freeze()
     logging.info(cfg)
-    for dataset in cfg.TRAINING.DATASETS:
-        train_and_eval_model(cfg, dataset)
+    train_and_eval_model(cfg)

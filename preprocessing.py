@@ -8,7 +8,7 @@ potential problem: running an old model may fail due to mappings
 """
 
 
-def load_dataset(datasets, do_pad_words):
+def load_dataset(dataset, dataset_name, do_pad_words):
     """
     if pad_words, then each word in every dataset will be padded to the length
     of the longest word. PAD token is integer 0. All fields would be padded,
@@ -56,38 +56,26 @@ def load_dataset(datasets, do_pad_words):
     data = {}
     word_length = -1
 
-    for datasetName, dataset in datasets.items():
-        dataset_columns = dataset["columns"]
+    dataset_columns = dataset["columns"]
 
-        trainData = "data/%s/train.txt" % datasetName
-        devData = "data/%s/dev.txt" % datasetName
-        testData = "data/%s/test.txt" % datasetName
-        paths = {
-            "train_matrix": trainData,
-            "dev_matrix": devData,
-            "test_matrix": testData,
-        }
+    train_data = "data/%s/train.txt" % dataset_name
+    dev_data = "data/%s/dev.txt" % dataset_name
+    test_data = "data/%s/test.txt" % dataset_name
+    paths = {
+        "train_matrix": train_data,
+        "dev_matrix": dev_data,
+        "test_matrix": test_data,
+    }
 
-        logging.info(":: Transform " + datasetName + " dataset ::")
-        mappings, vocab_size, n_class_labels = make_mappings(
-            paths.values(), do_pad_words
-        )
-        data[datasetName] = process_data(
-            paths, dataset_columns, dataset, mappings
-        )
-        if do_pad_words:
-            data[datasetName], word_length = pad_words(data[datasetName])
+    logging.info(":: Transform " + dataset_name + " dataset ::")
+    mappings, vocab_size, n_class_labels = make_mappings(paths.values(), do_pad_words)
+    data = process_data(paths, dataset_columns, dataset, mappings)
+    if do_pad_words:
+        data, word_length = pad_words(data)
 
     # currently do not have pre-trained phonetic embeddings.
     # returning embeddings = []. Embeddings mst be trained.
-    return (
-        embeddings,
-        data,
-        mappings,
-        vocab_size,
-        n_class_labels,
-        word_length,
-    )
+    return (embeddings, data, mappings, vocab_size, n_class_labels, word_length)
 
 
 def pad_words(data):
@@ -115,9 +103,7 @@ def pad_words(data):
                 "PAD" for _ in range(max_len - len(word["raw_tokens"]))
             ]
             word["tokens"] += [0 for _ in range(max_len - len(word["tokens"]))]
-            word["boundaries"] += [
-                0 for _ in range(max_len - len(word["boundaries"]))
-            ]
+            word["boundaries"] += [0 for _ in range(max_len - len(word["boundaries"]))]
             assert len(word["raw_tokens"]) == max_len
             assert len(word["tokens"]) == max_len
             assert len(word["boundaries"]) == max_len
@@ -185,9 +171,7 @@ def process_data(paths, dataset_columns, dataset, mappings):
 
         # add 'tokens' to data
         for i, entry in enumerate(data[name]):
-            data[name][i]["tokens"] = [
-                mappings[raw] for raw in entry["raw_tokens"]
-            ]
+            data[name][i]["tokens"] = [mappings[raw] for raw in entry["raw_tokens"]]
 
     return data
 
@@ -221,8 +205,6 @@ def create_data_matrix(words, mappings):
                 token_transform_lst.append(mappings[char])
             else:
                 token_transform_lst.append("0")
-        data.append(
-            {"raw_tokens": word["tokens"], "tokens": token_transform_lst}
-        )
+        data.append({"raw_tokens": word["tokens"], "tokens": token_transform_lst})
 
     return data

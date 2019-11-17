@@ -10,10 +10,10 @@ def try_tensorflow_import(verbose=False):
 
     import tensorflow as tf
 
+    tf.compat.v1.disable_eager_execution()
+
     if verbose:
-        tf.debugging.set_log_device_placement(
-            True
-        )  # logs what device is being used
+        tf.debugging.set_log_device_placement(True)  # logs what device is being used
     gpus = tf.config.experimental.list_physical_devices("GPU")
     if not gpus:
         return

@@ -22,15 +22,13 @@ _C.MODEL.EMBEDDING_SIZE = 300
 # TRAINING PARAMETERS
 # ------------------------------------------------------------
 _C.TRAINING = CN()
-# same as the language
+# same as the language in ./data folder
 # ["english", "italian", "basque", "dutch", "manipuri", "french"]
-_C.TRAINING.DATASETS = ["french"]
+_C.TRAINING.DATASET = "french"
 _C.TRAINING.FEATURE_NAMES = ["tokens"]
-_C.TRAINING.MODEL_SAVE_PATH = (
-    "models/[ModelName]_[Epoch]_[DevScore]_[TestScore].h5"
-)
+_C.TRAINING.MODEL_SAVE_PATH = "models/[DATASET]_[Epoch]_[DevScore]_[TestScore].h5"
 # used to get mean and standard deviation of model
-_C.TRAINING.TRAINING_REPEATS = 1  # just trains the model once
+_C.TRAINING.TRAINING_REPEATS = 2  # just trains the model once
 _C.TRAINING.EPOCHS = 120
 _C.TRAINING.MINI_BATCH_SIZE = 64
 _C.TRAINING.EARLY_STOPPING = 10

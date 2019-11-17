@@ -37,7 +37,15 @@ E	0
 
 ###  Citing lstm-syllabify  
 
-If this project contributed to your research, please cite the following [paper](https://arxiv.org/abs/1909.13362): *Language-Agnostic Syllabification with Neural Sequence Labeling*.  
+If this project contributed to your research, please cite the following [paper](https://arxiv.org/abs/1909.13362):  
+```
+@article{krantz2019language,
+  title={Language-Agnostic Syllabification with Neural Sequence Labeling},
+  author={Krantz, Jacob and Dulin, Maxwell and De Palma, Paul},
+  journal={arXiv preprint arXiv:1909.13362},
+  year={2019}
+}
+```
 
 ### Contact  
 

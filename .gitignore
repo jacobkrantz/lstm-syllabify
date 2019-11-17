@@ -107,5 +107,5 @@ venv.bak/
 .vscode
 models/
 
-# results folders
-results/*.csv
+# csv results
+*.csv
